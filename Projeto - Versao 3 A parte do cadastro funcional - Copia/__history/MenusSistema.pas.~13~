@@ -1,0 +1,41 @@
+unit MenusSistema;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.StdCtrls, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.ExtCtrls;
+
+type
+  TForm1 = class(TForm)
+    MainMenu1: TMainMenu;
+    Cadastro1: TMenuItem;
+    Cadastro2: TMenuItem;
+    CadastroAlimentos1: TMenuItem;
+    CadastroAlimentos2: TMenuItem;
+    Nome_Razao_Social: TLabel;
+    Digite_nome: TEdit;
+    CPF_CNPJ: TEdit;
+    Digitar_CRM: TEdit;
+    Button1: TButton;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Nao: TRadioButton;
+    Sim: TRadioButton;
+    DBGrid1: TDBGrid;
+    Possui_CRN: TLabel;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+end.
