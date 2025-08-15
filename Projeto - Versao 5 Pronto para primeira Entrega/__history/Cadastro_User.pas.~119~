@@ -1,0 +1,342 @@
+unit Cadastro_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.ExtCtrls, Vcl.Mask,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
+  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async,
+  FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client, Conexao,Pesquisa_Usuario,
+  Vcl.Imaging.pngimage;
+
+type
+  TCadastro_Usuario = class(TForm)
+    Nome_Razao_social: TLabel;
+    Inserir_nome: TEdit;
+    Digite_CRN: TMaskEdit;
+    Digite_Senha: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Nao_CRN: TRadioButton;
+    Sim_CRN: TRadioButton;
+    Senha: TLabel;
+    CRN_SIM_NAO: TLabel;
+    Cadastrar: TButton;
+    Painel_Cad: TPanel;
+    Sexo: TLabel;
+    Masculino: TRadioButton;
+    Feminino: TRadioButton;
+    Documentos: TLabel;
+    Inserir_CPF_CNPJ: TMaskEdit;
+    FDQuery1: TFDQuery;
+    CRN_Panel: TPanel;
+    Sxo_Panel: TPanel;
+    Image1: TImage;
+    Image2: TImage;
+    Image3: TImage;
+    Image4: TImage;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormResize(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure CPFClick(Sender: TObject);
+    procedure CNPJClick(Sender: TObject);
+    procedure Sim_CRNClick(Sender: TObject);
+    procedure Nao_CRNClick(Sender: TObject);
+    procedure CadastrarClick(Sender: TObject);
+    procedure LimparCampos;
+    procedure BtnPesquisarUsuarioClick(Sender: TObject);
+  private
+    procedure CentralizarPainel;
+    function RetirarMascara(const Valor: string): string;
+    function SexoSelecionado: string;
+  public
+  end;
+
+var
+  Cadastro_Usuario: TCadastro_Usuario;
+
+
+implementation
+
+{$R *.dfm}
+
+//------------------------------------------------------------------------------
+// Método para cadastrar usuário, inserindo dados na tabela USUARIOS (sem ID)
+//------------------------------------------------------------------------------
+procedure TCadastro_Usuario.BtnPesquisarUsuarioClick(Sender: TObject);
+begin
+  // Criar e abrir tela de pesquisa
+  with TFormPesquisaUsuario.Create(Self) do
+  try
+    if ShowModal = mrOk then
+    begin
+      // Preenche os campos do cadastro com o que foi selecionado
+      Inserir_nome.Text := NomeSelecionado;
+      Digite_Senha.Text := SenhaSelecionada; // opcional se quiser trazer senha
+      Inserir_CPF_CNPJ.Text := DocumentoSelecionado;
+
+      // Marca CPF ou CNPJ automaticamente
+      if Length(RetirarMascara(DocumentoSelecionado)) = 11 then
+        CPF.Checked := True
+      else
+        CNPJ.Checked := True;
+    end;
+  finally
+    Free;
+  end;
+end;
+
+
+procedure TCadastro_Usuario.CadastrarClick(Sender: TObject);
+var
+  vNome, vCPF, vCNPJ, vTipoConta, vCNR, vSenha, vSexo: string;
+begin
+  // Validação dos campos obrigatórios
+  if Trim(Inserir_nome.Text) = '' then
+  begin
+    MessageDlg('O campo Nome/Razão Social é obrigatório.',TMsgDlgType.mtWarning,[mbOK],0);
+    Inserir_nome.SetFocus;
+    Exit;
+  end;
+
+  if Trim(Digite_Senha.Text) = '' then
+  begin
+    MessageDlg('O campo Senha é obrigatório.',TMsgDlgType.mtWarning,[mbOK],0);
+    Digite_Senha.SetFocus;
+    Exit;
+  end;
+
+  // Coleta dos dados do formulário
+  vNome := Trim(Inserir_nome.Text);
+  vSenha := Digite_Senha.Text; // senha pode ter espaços
+  vSexo := SexoSelecionado;
+  vCNR := '';
+  vCPF := '';
+  vCNPJ := '';
+
+  // Verifica tipo do documento e coleta valor
+  if CPF.Checked then
+  begin
+    vTipoConta := 'F'; // Pessoa Física
+    vCPF := RetirarMascara(Inserir_CPF_CNPJ.Text);
+    if Length(vCPF) <> 11 then
+    begin
+      MessageDlg('O CPF informado é inválido. Verifique o número digitado.',TMsgDlgType.mtWarning,[mbOK],0);
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+    // Habilita campos de sexo
+    Masculino.Enabled := True;
+    Feminino.Enabled := True;
+  end
+  else if CNPJ.Checked then
+  begin
+    vTipoConta := 'J'; // Pessoa Jurídica
+    vCNPJ := RetirarMascara(Inserir_CPF_CNPJ.Text);
+    if Length(vCNPJ) <> 14 then
+    begin
+      MessageDlg('O CNPJ informado é inválido. Verifique o número digitado.',TMsgDlgType.mtWarning,[mbOK],0);
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+    // Desabilita campos de sexo
+    Masculino.Checked := False;
+    Feminino.Checked := False;
+    Masculino.Enabled := False;
+    Feminino.Enabled := False;
+    vSexo := ''; // Não salva sexo para PJ
+  end
+  else
+  begin
+    MessageDlg('Selecione um tipo de documento (CPF ou CNPJ).',TMsgDlgType.mtWarning,[mbOK],0);
+    Exit;
+  end;
+
+  // Coleta o CRN se selecionado (mantendo letras e formatação)
+  if Sim_CRN.Checked then
+    vCNR := Trim(Digite_CRN.Text);
+
+
+  // Executa insert no banco
+  try
+    FDQuery1.Close;
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('INSERT INTO USUARIOS (NOME, CPF, CNPJ, TIPO_CONTA, CNR, SENHA, SEXO)');
+    FDQuery1.SQL.Add('VALUES (:NOME, :CPF, :CNPJ, :TIPO_CONTA, :CNR, :SENHA, :SEXO)');
+
+    FDQuery1.ParamByName('NOME').AsString := vNome;
+    FDQuery1.ParamByName('CPF').AsString := vCPF;
+    FDQuery1.ParamByName('CNPJ').AsString := vCNPJ;
+    FDQuery1.ParamByName('TIPO_CONTA').AsString := vTipoConta;
+    FDQuery1.ParamByName('CNR').AsString := vCNR;
+    FDQuery1.ParamByName('SENHA').AsString := vSenha;
+    FDQuery1.ParamByName('SEXO').AsString := vSexo;
+
+    FDQuery1.ExecSQL;
+
+    MessageDlg('Usuário cadastrado com sucesso!',TMsgDlgType.mtConfirmation,[mbOK],0);
+    LimparCampos;
+
+  except
+    on E: Exception do
+    begin
+      MessageDlg('Erro ao cadastrar usuário: ' + E.Message,TMsgDlgType.mtWarning,[mbOK],0);
+    end;
+  end;
+end;
+
+
+//------------------------------------------------------------------------------
+// Métodos auxiliares existentes, sem alterações
+//------------------------------------------------------------------------------
+
+procedure TCadastro_Usuario.CentralizarPainel;
+begin
+  Painel_Cad.Left := (ClientWidth - Painel_Cad.Width) div 2;
+  Painel_Cad.Top := (ClientHeight - Painel_Cad.Height) div 2;
+end;
+
+procedure TCadastro_Usuario.FormCreate(Sender: TObject);
+begin
+  Position := poScreenCenter;
+  CentralizarPainel;
+
+  CPF.Checked := True;
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+
+  Nao_CRN.Checked := True;
+  Digite_CRN.Clear;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Cursor := crDefault;
+end;
+
+procedure TCadastro_Usuario.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  Cadastro_Usuario := nil;
+end;
+
+procedure TCadastro_Usuario.FormResize(Sender: TObject);
+begin
+  CentralizarPainel;
+end;
+
+procedure TCadastro_Usuario.CPFClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+
+  // Habilitar sexo
+   Sxo_Panel.Visible := True;
+end;
+
+procedure TCadastro_Usuario.CNPJClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '00.000.000/0000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+
+  // Desabilitar sexo
+  Masculino.visible := False;
+  Feminino.visible := False;
+  Sexo.Visible := False;
+  Sxo_Panel.Visible := False;
+
+end;
+
+procedure TCadastro_Usuario.Sim_CRNClick(Sender: TObject);
+begin
+  // Máscara: L = letra obrigatória, 0 = número obrigatório
+  Digite_CRN.EditMask := '';
+  Digite_CRN.ReadOnly := False;
+  Digite_CRN.Enabled := True;
+  Digite_CRN.Text := '';
+  Digite_CRN.SelStart := Length(Digite_CRN.Text);
+  Digite_CRN.Cursor := crIBeam;
+  Digite_CRN.Visible := True;
+
+
+end;
+
+
+
+procedure TCadastro_Usuario.Nao_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.Clear;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.Cursor := crDefault;
+  Digite_CRN.Visible := False;
+end;
+
+function TCadastro_Usuario.RetirarMascara(const Valor: string): string;
+var
+  i: Integer;
+  c: Char;
+  Resultado: string;
+begin
+  Resultado := '';
+  for i := 1 to Length(Valor) do
+  begin
+    c := Valor[i];
+    if CharInSet(c, ['0'..'9']) then
+      Resultado := Resultado + c;
+  end;
+  Result := Resultado;
+end;
+
+function TCadastro_Usuario.SexoSelecionado: string;
+begin
+  if Masculino.Checked then
+    Result := 'M'
+  else if Feminino.Checked then
+    Result := 'F'
+  else
+    Result := '';
+end;
+
+procedure TCadastro_Usuario.LimparCampos;
+begin
+  Inserir_nome.Clear;
+  Digite_Senha.Clear;
+  Inserir_CPF_CNPJ.Clear;
+  Digite_CRN.Clear;
+
+  // Resetar seleções
+  CPF.Checked := True;
+  Nao_CRN.Checked := True;
+  Masculino.Checked := False;
+  Feminino.Checked := False;
+
+  // Reaplicar máscara padrão CPF
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.ReadOnly := False;
+
+  // Desabilitar campo CRN
+  Digite_CRN.Enabled := false;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Cursor := crDefault;
+
+  // Focar no primeiro campo
+  Inserir_nome.SetFocus;
+end;
+
+
+end.
+
