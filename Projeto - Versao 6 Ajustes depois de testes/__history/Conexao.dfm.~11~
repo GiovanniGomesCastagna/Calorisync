@@ -1,0 +1,15 @@
+object DataModule1: TDataModule1
+  Height = 480
+  Width = 640
+  object FDConnection1: TFDConnection
+    Params.Strings = (
+      'Database=E:\Calorisync\Calorisync\bancoDados\CaloriBanco'
+      'DriverID=SQLite')
+    Left = 160
+    Top = 48
+  end
+  object FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink
+    Left = 312
+    Top = 56
+  end
+end
