@@ -3,12 +3,15 @@
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB,
   Vcl.Grids, Vcl.DBGrids, Vcl.ExtCtrls, Vcl.Mask,
-  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error,
   FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async,
-  FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client, Conexao,Pesquisa_Usuario,
+  FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client, Conexao,
+  Pesquisa_Usuario,
   Vcl.Imaging.pngimage;
 
 type
@@ -62,32 +65,32 @@ implementation
 
 {$R *.dfm}
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Método para pesquisar usuário existente
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 procedure TCadastro_Usuario.BtnPesquisarUsuarioClick(Sender: TObject);
 begin
   with TFormPesquisaUsuario.Create(Self) do
-  try
-    if ShowModal = mrOk then
-    begin
-      Inserir_nome.Text := NomeSelecionado;
-      Digite_Senha.Text := SenhaSelecionada;
-      Inserir_CPF_CNPJ.Text := DocumentoSelecionado;
+    try
+      if ShowModal = mrOk then
+      begin
+        Inserir_nome.Text := NomeSelecionado;
+        Digite_Senha.Text := SenhaSelecionada;
+        Inserir_CPF_CNPJ.Text := DocumentoSelecionado;
 
-      if Length(RetirarMascara(DocumentoSelecionado)) = 11 then
-        CPF.Checked := True
-      else
-        CNPJ.Checked := True;
+        if Length(RetirarMascara(DocumentoSelecionado)) = 11 then
+          CPF.Checked := True
+        else
+          CNPJ.Checked := True;
+      end;
+    finally
+      Free;
     end;
-  finally
-    Free;
-  end;
 end;
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Método para cadastrar usuário, com validação de duplicidade CPF/CNPJ
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 procedure TCadastro_Usuario.CadastrarClick(Sender: TObject);
 var
   vNome, vCPF, vCNPJ, vTipoConta, vCNR, vSenha, vSexo: string;
@@ -95,24 +98,25 @@ var
 begin
   if Trim(Inserir_nome.Text) = '' then
   begin
-    MessageDlg('O campo Nome/Razão Social é obrigatório.', mtWarning,[mbOK],0);
+    MessageDlg('O campo Nome/Razão Social é obrigatório.', mtWarning,
+      [mbOK], 0);
     Inserir_nome.SetFocus;
     Exit;
   end;
 
   if Trim(Digite_Senha.Text) = '' then
   begin
-    MessageDlg('O campo Senha é obrigatório.', mtWarning,[mbOK],0);
+    MessageDlg('O campo Senha é obrigatório.', mtWarning, [mbOK], 0);
     Digite_Senha.SetFocus;
     Exit;
   end;
 
-  vNome  := Trim(Inserir_nome.Text);
+  vNome := Trim(Inserir_nome.Text);
   vSenha := Digite_Senha.Text;
-  vSexo  := SexoSelecionado;
-  vCNR   := '';
-  vCPF   := '';
-  vCNPJ  := '';
+  vSexo := SexoSelecionado;
+  vCNR := '';
+  vCPF := '';
+  vCNPJ := '';
 
   if CPF.Checked then
   begin
@@ -120,7 +124,7 @@ begin
     vCPF := RetirarMascara(Inserir_CPF_CNPJ.Text);
     if Length(vCPF) <> 11 then
     begin
-      MessageDlg('O CPF informado é inválido.', mtWarning,[mbOK],0);
+      MessageDlg('O CPF informado é inválido.', mtWarning, [mbOK], 0);
       Inserir_CPF_CNPJ.SetFocus;
       Exit;
     end;
@@ -131,7 +135,7 @@ begin
     vCNPJ := RetirarMascara(Inserir_CPF_CNPJ.Text);
     if Length(vCNPJ) <> 14 then
     begin
-      MessageDlg('O CNPJ informado é inválido.', mtWarning,[mbOK],0);
+      MessageDlg('O CNPJ informado é inválido.', mtWarning, [mbOK], 0);
       Inserir_CPF_CNPJ.SetFocus;
       Exit;
     end;
@@ -139,27 +143,32 @@ begin
   end
   else
   begin
-    MessageDlg('Selecione um tipo de documento (CPF ou CNPJ).', mtWarning,[mbOK],0);
+    MessageDlg('Selecione um tipo de documento (CPF ou CNPJ).', mtWarning,
+      [mbOK], 0);
     Exit;
   end;
 
-  // 🔎 Agora CRN é obrigatório
-  if Trim(Digite_CRN.Text) = '' then
-  begin
-    MessageDlg('O campo CRN é obrigatório.', mtWarning, [mbOK], 0);
-    Digite_CRN.SetFocus;
-    Exit;
-  end;
-
+  // 🔎 Validar CRN apenas se Sim_CRN estiver marcado
+  vCNR := '';
   if Sim_CRN.Checked then
+  begin
+    if Trim(Digite_CRN.Text) = '' then
+    begin
+      MessageDlg('O campo CRN é obrigatório.', mtWarning, [mbOK], 0);
+      Digite_CRN.SetFocus;
+      Exit;
+    end;
     vCNR := Trim(Digite_CRN.Text);
+  end;
+  vCNR := Trim(Digite_CRN.Text);
 
   try
     // 🔎 Verificar duplicidade no banco
     FDQuery1.Close;
     FDQuery1.SQL.Clear;
     FDQuery1.SQL.Add('SELECT COUNT(*) AS QTD FROM USUARIOS');
-    FDQuery1.SQL.Add('WHERE (CPF = :CPF AND :CPF <> '''') OR (CNPJ = :CNPJ AND :CNPJ <> '''')');
+    FDQuery1.SQL.Add
+      ('WHERE (CPF = :CPF AND :CPF <> '''') OR (CNPJ = :CNPJ AND :CNPJ <> '''')');
     FDQuery1.ParamByName('CPF').AsString := vCPF;
     FDQuery1.ParamByName('CNPJ').AsString := vCNPJ;
     FDQuery1.Open;
@@ -167,15 +176,18 @@ begin
     vCount := FDQuery1.FieldByName('QTD').AsInteger;
     if vCount > 0 then
     begin
-      MessageDlg('Cadastro já existente para este CPF/CNPJ.', mtWarning,[mbOK],0);
+      MessageDlg('Cadastro já existente para este CPF/CNPJ.', mtWarning,
+        [mbOK], 0);
       Exit;
     end;
 
     // 🚀 Inserir no banco
     FDQuery1.Close;
     FDQuery1.SQL.Clear;
-    FDQuery1.SQL.Add('INSERT INTO USUARIOS (NOME, CPF, CNPJ, TIPO_CONTA, CNR, SENHA, SEXO)');
-    FDQuery1.SQL.Add('VALUES (:NOME, :CPF, :CNPJ, :TIPO_CONTA, :CNR, :SENHA, :SEXO)');
+    FDQuery1.SQL.Add
+      ('INSERT INTO USUARIOS (NOME, CPF, CNPJ, TIPO_CONTA, CNR, SENHA, SEXO)');
+    FDQuery1.SQL.Add
+      ('VALUES (:NOME, :CPF, :CNPJ, :TIPO_CONTA, :CNR, :SENHA, :SEXO)');
     FDQuery1.ParamByName('NOME').AsString := vNome;
     FDQuery1.ParamByName('CPF').AsString := vCPF;
     FDQuery1.ParamByName('CNPJ').AsString := vCNPJ;
@@ -186,22 +198,23 @@ begin
 
     FDQuery1.ExecSQL;
 
-    MessageDlg('Usuário cadastrado com sucesso!', mtConfirmation,[mbOK],0);
+    MessageDlg('Usuário cadastrado com sucesso!', mtConfirmation, [mbOK], 0);
     LimparCampos;
 
   except
     on E: Exception do
-      MessageDlg('Erro ao cadastrar usuário: ' + E.Message, mtWarning,[mbOK],0);
+      MessageDlg('Erro ao cadastrar usuário: ' + E.Message, mtWarning,
+        [mbOK], 0);
   end;
 end;
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Auxiliares
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 procedure TCadastro_Usuario.CentralizarPainel;
 begin
   Painel_Cad.Left := (ClientWidth - Painel_Cad.Width) div 2;
-  Painel_Cad.Top  := (ClientHeight - Painel_Cad.Height) div 2;
+  Painel_Cad.Top := (ClientHeight - Painel_Cad.Height) div 2;
 end;
 
 procedure TCadastro_Usuario.FormCreate(Sender: TObject);
@@ -223,13 +236,15 @@ begin
   Digite_CRN.Visible := False;
 end;
 
-procedure TCadastro_Usuario.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TCadastro_Usuario.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
 begin
   if Key = VK_ESCAPE then
     Close;
 end;
 
-procedure TCadastro_Usuario.FormClose(Sender: TObject; var Action: TCloseAction);
+procedure TCadastro_Usuario.FormClose(Sender: TObject;
+  var Action: TCloseAction);
 begin
   Action := caFree;
   Cadastro_Usuario := nil;
@@ -251,8 +266,8 @@ begin
   Inserir_CPF_CNPJ.SelStart := 0;
 
   Masculino.Visible := True;
-  Feminino.Visible  := True;
-  Sexo.Visible      := True;
+  Feminino.Visible := True;
+  Sexo.Visible := True;
   Sxo_Panel.Visible := True;
 end;
 
@@ -267,8 +282,8 @@ begin
   Inserir_CPF_CNPJ.SelStart := 0;
 
   Masculino.Visible := False;
-  Feminino.Visible  := False;
-  Sexo.Visible      := False;
+  Feminino.Visible := False;
+  Sexo.Visible := False;
   Sxo_Panel.Visible := False;
 end;
 
@@ -276,20 +291,20 @@ procedure TCadastro_Usuario.Sim_CRNClick(Sender: TObject);
 begin
   Digite_CRN.EditMask := '';
   Digite_CRN.ReadOnly := False;
-  Digite_CRN.Enabled  := True;
-  Digite_CRN.Text     := '';
+  Digite_CRN.Enabled := True;
+  Digite_CRN.Text := '';
   Digite_CRN.SelStart := Length(Digite_CRN.Text);
-  Digite_CRN.Cursor   := crIBeam;
-  Digite_CRN.Visible  := True;
+  Digite_CRN.Cursor := crIBeam;
+  Digite_CRN.Visible := True;
 end;
 
 procedure TCadastro_Usuario.Nao_CRNClick(Sender: TObject);
 begin
   Digite_CRN.Clear;
   Digite_CRN.ReadOnly := True;
-  Digite_CRN.Enabled  := False;
-  Digite_CRN.Cursor   := crDefault;
-  Digite_CRN.Visible  := False;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.Cursor := crDefault;
+  Digite_CRN.Visible := False;
 end;
 
 function TCadastro_Usuario.RetirarMascara(const Valor: string): string;
@@ -302,7 +317,7 @@ begin
   for i := 1 to Length(Valor) do
   begin
     c := Valor[i];
-    if CharInSet(c, ['0'..'9']) then
+    if CharInSet(c, ['0' .. '9']) then
       Resultado := Resultado + c;
   end;
   Result := Resultado;
@@ -331,15 +346,14 @@ begin
   Feminino.Checked := False;
 
   Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
-  Inserir_CPF_CNPJ.Enabled  := True;
+  Inserir_CPF_CNPJ.Enabled := True;
   Inserir_CPF_CNPJ.ReadOnly := False;
 
   Digite_CRN.Enabled := False;
   Digite_CRN.ReadOnly := True;
-  Digite_CRN.Cursor   := crDefault;
+  Digite_CRN.Cursor := crDefault;
 
   Inserir_nome.SetFocus;
 end;
 
 end.
-

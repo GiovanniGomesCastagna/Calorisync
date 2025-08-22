@@ -1,12 +1,13 @@
 object DataModule1: TDataModule1
+  OnCreate = DataModuleCreate
   Height = 600
   Width = 800
   PixelsPerInch = 120
   object FDConnection1: TFDConnection
     Params.Strings = (
-      'Database=D:\Calorisync\Calorisync\bancoDados\CaloriBanco'
       'StringFormat=Unicode'
       'DriverID=SQLite')
+    Connected = True
     Left = 200
     Top = 60
   end

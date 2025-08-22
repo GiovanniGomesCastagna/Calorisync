@@ -7,16 +7,18 @@ uses
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait,
   Data.DB, FireDAC.Comp.Client, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
-  FireDAC.Stan.ExprFuncs, FireDAC.Phys.SQLiteWrapper.Stat;
+  FireDAC.Stan.ExprFuncs, FireDAC.Phys.SQLiteWrapper.Stat, System.IniFiles,
+  Vcl.Dialogs;
 
 type
   TDataModule1 = class(TDataModule)
     FDConnection1: TFDConnection;
     FDPhysSQLiteDriverLink1: TFDPhysSQLiteDriverLink;
+    procedure DataModuleCreate(Sender: TObject);
   private
     { Private declarations }
   public
-    { Public declarations }
+    function BuscarCaminho(): string;
   end;
 
 var
@@ -25,7 +27,51 @@ var
 implementation
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
-
 {$R *.dfm}
+
+function TDataModule1.BuscarCaminho: string;
+var
+  LIniFile: TIniFile;
+  LCaminho: string;
+begin
+  LCaminho := ExtractFilePath(ParamStr(0));
+  if not FileExists(LCaminho + 'config.ini') then
+  begin
+    ShowMessage('Arquivo ' + LCaminho + 'config.ini não encontrado!' +
+      sLineBreak + 'Verifique.');
+    Abort;
+  end;
+
+  LIniFile := TIniFile.Create(LCaminho + 'config.ini');
+  try
+    Result := LIniFile.ReadString('configuracao', 'caminhobanco', '');
+    if Result = '' then
+    begin
+      ShowMessage('Caminho do banco não configurado no config.ini.');
+      Abort;
+    end;
+  finally
+    LIniFile.Free;
+  end;
+
+end;
+
+procedure TDataModule1.DataModuleCreate(Sender: TObject);
+begin
+  try
+    FDConnection1.Close;
+    FDConnection1.Params.Clear;
+    FDConnection1.Params.Add('DriverID=SQLite');
+    FDConnection1.Params.Add('Database=' + BuscarCaminho);
+    // FDConnection1.Params.Add('User_Name=sysdba');
+    // FDConnection1.Params.Add('Password=masterkey');
+    FDConnection1.Connected := True;
+  except
+    on E: Exception do
+      ShowMessage('Não foi possível conectar ao banco: ' + sLineBreak +
+        E.Message);
+  end;
+
+end;
 
 end.
