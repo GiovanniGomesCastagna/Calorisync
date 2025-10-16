@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2024/10/30 07:40:21.000.758,=C:\Users\USER\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2024/10/30 07:43:08.000.696,=C:\Users\USER\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2024/10/30 07:45:05.000.398,=C:\Users\USER\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/02/24 09:52:49.000.722,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/02/25 09:16:09.000.483,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/02/25 09:27:28.000.042,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/02/25 09:36:09.000.597,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/02/28 11:22:29.000.303,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/04/29 16:34:55.000.073,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 17:04:40.000.956,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 17:13:21.000.333,=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>2025/08/08 17:13:47.000.538,E:\Calorisync\Calorisync\Projeto - Copia\Login_user.dfm=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit2.dfm</Transaction>
+    <Transaction>2025/08/08 17:13:47.000.538,E:\Calorisync\Calorisync\Projeto - Copia\Login_user.pas=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>2025/08/08 17:13:50.000.842,E:\Calorisync\Calorisync\Projeto - Copia\Login.dproj=C:\Users\USER\OneDrive\Documentos\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2025/08/08 18:05:50.000.500,=E:\Calorisync\Calorisync\Projeto - Copia\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 18:06:31.000.576,E:\Calorisync\Calorisync\Projeto - Copia\Conexao.pas=E:\Calorisync\Calorisync\Projeto - Copia\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 18:06:31.000.576,E:\Calorisync\Calorisync\Projeto - Copia\Conexao.dfm=E:\Calorisync\Calorisync\Projeto - Copia\Unit1.dfm</Transaction>
+    <Transaction>2025/08/08 19:19:22.000.872,=D:\Calorisync\Calorisync\Projeto - Copia\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 19:20:21.000.015,D:\Calorisync\Calorisync\Projeto - Copia\MenusSistema.pas=D:\Calorisync\Calorisync\Projeto - Copia\Unit1.pas</Transaction>
+    <Transaction>2025/08/08 19:20:21.000.015,D:\Calorisync\Calorisync\Projeto - Copia\MenusSistema.dfm=D:\Calorisync\Calorisync\Projeto - Copia\Unit1.dfm</Transaction>
+    <Transaction>2025/08/09 17:10:07.000.841,=D:\Calorisync\Calorisync\Projeto - Copia\Unit1.pas</Transaction>
+    <Transaction>2025/08/09 17:10:56.000.219,=D:\Calorisync\Calorisync\Projeto - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/10 11:52:39.000.675,=D:\Calorisync\Calorisync\Projeto - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/10 11:53:21.000.588,D:\Calorisync\Calorisync\Projeto - Copia\Cadastro_User.pas=D:\Calorisync\Calorisync\Projeto - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/10 11:53:21.000.588,D:\Calorisync\Calorisync\Projeto - Copia\Cadastro_User.dfm=D:\Calorisync\Calorisync\Projeto - Copia\Unit3.dfm</Transaction>
+    <Transaction>2025/08/12 13:03:30.000.935,=E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/12 13:05:08.000.410,E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Pesquisa_Usuario.dfm=E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Unit3.dfm</Transaction>
+    <Transaction>2025/08/12 13:05:08.000.410,E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Pesquisa_Usuario.pas=E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/12 13:07:06.000.753,E:\Calorisync\Calorisync\Projeto - Inserindo os dados no bnco mas falta vlidar o sxo quando for cnpj e levar as letras do CRN - Copia\Pesquisa_Usuario.pas=</Transaction>
+    <Transaction>2025/08/14 16:33:16.000.450,=E:\Calorisync\Calorisync\Projeto - Versao 4 Mensagens atualizadas - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/14 16:34:03.000.905,E:\Calorisync\Calorisync\Projeto - Versao 4 Mensagens atualizadas - Copia\Unit3.dfm=E:\Calorisync\Calorisync\Projeto - Versao 4 Mensagens atualizadas - Copia\Consulta_User.dfm</Transaction>
+    <Transaction>2025/08/14 16:34:03.000.905,E:\Calorisync\Calorisync\Projeto - Versao 4 Mensagens atualizadas - Copia\Unit3.pas=E:\Calorisync\Calorisync\Projeto - Versao 4 Mensagens atualizadas - Copia\Consulta_User.pas</Transaction>
+    <Transaction>2025/08/31 13:55:16.000.170,=D:\Calorisync\Calorisync\Projeto - Versao 10 cadastro funcionando e consulta de usuarios funcionando - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/08/31 13:56:32.000.052,D:\Calorisync\Calorisync\Projeto - Versao 10 cadastro funcionando e consulta de usuarios funcionando - Copia\CadastroAlimentos.dfm=D:\Calorisync\Calorisync\Projeto - Versao 10 cadastro funcionando e consulta de usuarios funcionando - Copia\Unit3.dfm</Transaction>
+    <Transaction>2025/08/31 13:56:32.000.052,D:\Calorisync\Calorisync\Projeto - Versao 10 cadastro funcionando e consulta de usuarios funcionando - Copia\CadastroAlimentos.pas=D:\Calorisync\Calorisync\Projeto - Versao 10 cadastro funcionando e consulta de usuarios funcionando - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/09/18 19:42:45.000.752,=D:\Calorisync\Calorisync\Projeto - Versao 14 - Novas Implementações\Unit3.pas</Transaction>
+    <Transaction>2025/09/18 19:45:16.000.813,D:\Calorisync\Calorisync\Projeto - Versao 14 - Novas Implementações\Cadastro_Receitas.pas=D:\Calorisync\Calorisync\Projeto - Versao 14 - Novas Implementações\Unit3.pas</Transaction>
+    <Transaction>2025/09/18 19:45:16.000.813,D:\Calorisync\Calorisync\Projeto - Versao 14 - Novas Implementações\Cadastro_Receitas.dfm=D:\Calorisync\Calorisync\Projeto - Versao 14 - Novas Implementações\Unit3.dfm</Transaction>
+    <Transaction>2025/10/09 17:02:39.000.135,=E:\Calorisync\Calorisync\Projeto - Versao 16 - Refatorado Consulta Usuario e grid usuario nos alimentos - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/10/09 17:02:51.000.206,E:\Calorisync\Calorisync\Projeto - Versao 16 - Refatorado Consulta Usuario e grid usuario nos alimentos - Copia\Cadastro_Exercicio.pas=E:\Calorisync\Calorisync\Projeto - Versao 16 - Refatorado Consulta Usuario e grid usuario nos alimentos - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/10/09 17:02:51.000.206,E:\Calorisync\Calorisync\Projeto - Versao 16 - Refatorado Consulta Usuario e grid usuario nos alimentos - Copia\Cadastro_Exercicio.dfm=E:\Calorisync\Calorisync\Projeto - Versao 16 - Refatorado Consulta Usuario e grid usuario nos alimentos - Copia\Unit3.dfm</Transaction>
+    <Transaction>2025/10/10 18:00:10.000.815,=E:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/10/10 18:01:54.000.957,E:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.dfm=E:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Refeicao_Cadastro.dfm</Transaction>
+    <Transaction>2025/10/10 18:01:54.000.957,E:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.pas=E:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Refeicao_Cadastro.pas</Transaction>
+    <Transaction>2025/10/10 18:52:30.249,=D:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.pas</Transaction>
+    <Transaction>2025/10/10 18:52:50.338,D:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Dia_Semana.dfm=D:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.dfm</Transaction>
+    <Transaction>2025/10/10 18:52:50.338,D:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Dia_Semana.pas=D:\Calorisync\Calorisync\Projeto - Versao 18 - usuario ok, exercicio ok, falta receitas - Copia\Unit3.pas</Transaction>
+  </Transactions>
+	<ProjectSortOrder AutoSort="0" SortType="0">
+    <File Path="Cadastro_User.pas"/>
+    <File Path="Cadastro_User.dfm"/>
+    <File Path="Conexao.pas"/>
+    <File Path="Conexao.dfm"/>
+    <File Path="Login_user.pas"/>
+    <File Path="Login_user.dfm"/>
+    <File Path="MenusSistema.pas"/>
+    <File Path="MenusSistema.dfm"/>
+    <File Path="Consulta_User.pas"/>
+    <File Path="Consulta_User.dfm"/>
+    <File Path="CadastroAlimentos.pas"/>
+    <File Path="CadastroAlimentos.dfm"/>
+    <File Path="Cadastro_Receitas.pas"/>
+    <File Path="Cadastro_Receitas.dfm"/>
+    <File Path="Cadastro_Exercicio.pas"/>
+    <File Path="Cadastro_Exercicio.dfm"/>
+    <File Path="Refeicao_Cadastro.pas"/>
+    <File Path="Refeicao_Cadastro.dfm"/>
+    <File Path="Dia_Semana.pas"/>
+    <File Path="Dia_Semana.dfm"/>
+  </ProjectSortOrder>
+</BorlandProject>

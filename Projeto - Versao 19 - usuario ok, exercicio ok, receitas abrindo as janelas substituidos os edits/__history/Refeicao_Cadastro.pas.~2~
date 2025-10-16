@@ -1,0 +1,24 @@
+unit Refeicao_Cadastro;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs;
+
+type
+  TRefecicao_Cadastro = class(TForm)
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Refecicao_Cadastro: TRefecicao_Cadastro;
+
+implementation
+
+{$R *.dfm}
+
+end.

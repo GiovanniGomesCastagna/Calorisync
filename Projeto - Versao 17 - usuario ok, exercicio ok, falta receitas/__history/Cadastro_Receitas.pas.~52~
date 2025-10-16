@@ -1,0 +1,109 @@
+﻿unit Cadastro_Receitas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.DBCtrls,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Data.Win.ADODB, Vcl.Mask;
+
+type
+  TCadastro_Receita = class(TForm)
+    NomePessoa: TLabel;
+    Cardapio: TLabel;
+    lista_alimento: TDBGrid;
+    Salvar: TButton;
+    Excluir: TButton;
+    Proximo: TButton;
+    Anterior: TButton;
+    Refeicao: TLabel;
+    DiadaSemana: TLabel;
+    btn1: TSpeedButton;
+    DataSource1: TDataSource;
+    FDQuery1: TFDQuery;
+    Nome: TDBEdit;
+    DBEdit1: TDBEdit;
+    DBEdit2: TDBEdit;
+    DBEdit3: TDBEdit;
+    SpeedButton1: TSpeedButton;
+    SpeedButton2: TSpeedButton;
+    procedure btn1Click(Sender: TObject);
+  private
+    procedure GridDblClick(Sender: TObject); // 👈 adiciona aqui
+  public
+  end;
+
+
+var
+  Cadastro_Receita: TCadastro_Receita;
+
+implementation
+
+{$R *.dfm}
+
+uses Conexao;
+
+procedure TCadastro_Receita.btn1Click(Sender: TObject);
+var
+  FormGrid: TForm;
+  Grid: TDBGrid;
+  DSGrid: TDataSource;
+  QryGrid: TFDQuery;
+begin
+  // Cria o form modal temporário
+  FormGrid := TForm.Create(Self);
+  try
+
+    // Cria a query do grid
+    QryGrid := TFDQuery.Create(FormGrid);
+    QryGrid.Connection := DataModule1.FDConnection1;
+    QryGrid.SQL.Text :=
+      'SELECT ' +
+      'NOME_EXERCICIO AS NOME, ' +
+      'CALORIAS_QUEIMADAS, ' +
+      'FREQUENCIA_EXERCICIO, ' +
+      'REPETICAO_EXERCICIO, ' +
+      'SERIE_EXERCICIO, ' +
+      'TEMPO_EXERCICIO, ' +
+      'FROM EXERCICIOS ' +
+      'ORDER BY NOME;';
+    QryGrid.Open;
+
+    // Exibe o form modal
+    FormGrid.ShowModal;
+
+  finally
+    FormGrid.Free;
+  end;
+end;
+
+// Evento do duplo clique no grid
+procedure TCadastro_Receita.GridDblClick(Sender: TObject);
+var
+  Grid: TDBGrid;
+  QryGrid: TFDQuery;
+  NomeSelecionado: string;
+begin
+  Grid := TDBGrid(Sender);
+  if not Assigned(Grid) then Exit;
+
+  // Recupera a query associada
+  QryGrid := TFDQuery(Pointer(Grid.Tag));
+  if not Assigned(QryGrid) then Exit;
+
+  // Pega o nome selecionado
+  NomeSelecionado := QryGrid.FieldByName('NOME').AsString;
+
+  // Fecha o modal
+  if Assigned(Grid.Owner) and (Grid.Owner is TForm) then
+    (Grid.Owner as TForm).ModalResult := mrOk;
+
+  Nome.Text := NomeSelecionado;
+end;
+
+end.
+

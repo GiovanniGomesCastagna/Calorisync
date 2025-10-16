@@ -1,0 +1,25 @@
+unit Cadastro_Receitas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls;
+
+type
+  TCadastro_Receita = class(TForm)
+    TPReceitas: TPanel;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Cadastro_Receita: TCadastro_Receita;
+
+implementation
+
+{$R *.dfm}
+
+end.

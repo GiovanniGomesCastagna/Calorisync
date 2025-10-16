@@ -1,0 +1,48 @@
+unit Cadastro_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB, Vcl.Grids,
+  Vcl.DBGrids;
+
+type
+  TCadastro_Usuario = class(TForm)
+    Nome_Razao_social: TLabel;
+    Inserir_nome: TEdit;
+    Inserir_CPF_CNPJ: TEdit;
+    Digite_CRN: TEdit;
+    Digite_Senha: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Nao: TRadioButton;
+    Sim: TRadioButton;
+    Senha: TLabel;
+    CRN_SIM_NAO: TLabel;
+    Cadastrar: TButton;
+    Editar: TButton;
+    Excluir: TButton;
+    DBGrid1: TDBGrid;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Cadastro_Usuario: TCadastro_Usuario;
+
+implementation
+
+{$R *.dfm}
+
+procedure TCadastro_Usuario.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;            // Libera o form da memória ao fechar
+  Cadastro_Usuario := nil;     // Evita ponteiro inválido
+end;
+
+end.
+

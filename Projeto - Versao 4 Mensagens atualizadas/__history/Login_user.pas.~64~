@@ -1,0 +1,100 @@
+﻿unit Login_user;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Imaging.pngimage, Vcl.ExtCtrls,
+  Vcl.StdCtrls, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, Data.DB, FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client, Conexao, MenusSistema;
+
+type
+  TForm2 = class(TForm)
+    Panel1: TPanel;
+    Fundo_Panel: TImage;
+    Usuáro: TLabel;
+    User_Name: TEdit;    // seu TEdit para CPF
+    Senha: TLabel;
+    Senha_User: TEdit;   // seu TEdit para senha
+    Entrar: TButton;     // seu botão Entrar
+    Imagem_Fundo: TImage;
+    FDQuery1: TFDQuery;
+    Fechar: TButton;
+    procedure EntrarClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure User_NameKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure Senha_UserKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FecharClick(Sender: TObject);
+    procedure User_NameChange(Sender: TObject);
+  private
+  public
+  end;
+
+var
+  Form2: TForm2;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm2.FecharClick(Sender: TObject);
+begin
+Application.Terminate;
+end;
+
+procedure TForm2.FormCreate(Sender: TObject);
+begin
+  FDQuery1.Connection := DataModule1.FDConnection1;
+end;
+
+procedure TForm2.User_NameChange(Sender: TObject);
+var
+  PosCursor: Integer;
+begin
+  PosCursor := User_Name.SelStart;             // salva a posição do cursor
+  User_Name.Text := UpperCase(User_Name.Text); // converte para maiúsculo
+  User_Name.SelStart := PosCursor;             // restaura a posição do cursor
+end;
+
+procedure TForm2.User_NameKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_RETURN then
+  begin
+    Key := 0; // evita beep
+    Senha_User.SetFocus; // vai para o campo de senha
+  end;
+end;
+
+procedure TForm2.Senha_UserKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_RETURN then
+  begin
+    Key := 0; // evita beep
+    EntrarClick(Sender); // executa o login
+  end;
+end;
+
+procedure TForm2.EntrarClick(Sender: TObject);
+begin
+  FDQuery1.Close;
+  FDQuery1.SQL.Text :=
+    'SELECT * FROM USUARIOS WHERE UPPER(NOME) = UPPER(:usuario) AND SENHA = :senha';
+
+  FDQuery1.ParamByName('usuario').AsString := Trim(User_Name.Text);
+  FDQuery1.ParamByName('senha').AsString := Trim(Senha_User.Text);
+
+  FDQuery1.Open;
+
+  if not FDQuery1.IsEmpty then
+  begin
+    //ShowMessage('Login realizado com sucesso!');
+    ModalResult := mrOk;  // Fecha o formulário e retorna sucesso
+  end
+  else
+    ShowMessage('Usuário ou senha inválidos.');
+end;
+
+end.
+

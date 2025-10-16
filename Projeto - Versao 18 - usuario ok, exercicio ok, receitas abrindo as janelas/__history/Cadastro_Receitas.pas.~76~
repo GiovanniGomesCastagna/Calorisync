@@ -1,0 +1,231 @@
+﻿unit Cadastro_Receitas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.DBCtrls,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Refeicao_Cadastro, Data.Win.ADODB, Vcl.Mask, Dia_Semana, CadastroAlimentos;
+
+type
+  TCadastro_Receita = class(TForm)
+    NomePessoa: TLabel;
+    Cardapio: TLabel;
+    lista_alimento: TDBGrid;
+    Salvar: TButton;
+    Excluir: TButton;
+    Proximo: TButton;
+    Anterior: TButton;
+    Refeicao: TLabel;
+    DiadaSemana: TLabel;
+    btn1: TSpeedButton;
+    DataSource1: TDataSource;
+    FDQuery1: TFDQuery;
+    Nome: TDBEdit;
+    DBEdit1: TDBEdit;
+    DBEdit2: TDBEdit;
+    DBEdit3: TDBEdit;
+    SpeedButton1: TSpeedButton;
+    SpeedButton2: TSpeedButton;
+    DBEdit4: TDBEdit;
+    Alimentos: TLabel;
+    SpeedButton3: TSpeedButton;
+    SpeedButton4: TSpeedButton;
+    procedure btn1Click(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
+    procedure SpeedButton2Click(Sender: TObject);
+    procedure SpeedButton4Click(Sender: TObject);
+  private
+    procedure GridDblClick(Sender: TObject);
+  public
+  end;
+
+var
+  Cadastro_Receita: TCadastro_Receita;
+
+implementation
+
+{$R *.dfm}
+
+uses Conexao;
+
+{===========================}
+{== Seleção de Usuário ====}
+{===========================}
+procedure TCadastro_Receita.btn1Click(Sender: TObject);
+var
+  FormGrid: TForm;
+  Grid: TDBGrid;
+  DSGrid: TDataSource;
+  QryGrid: TFDQuery;
+begin
+  FormGrid := TForm.Create(Self);
+  try
+    FormGrid.Caption := 'Usuários Cadastrados';
+    FormGrid.Width := 500;
+    FormGrid.Height := 300;
+    FormGrid.Position := poScreenCenter;
+    FormGrid.BorderStyle := bsDialog;
+    FormGrid.Color := clBtnFace;
+
+    QryGrid := TFDQuery.Create(FormGrid);
+    QryGrid.Connection := DataModule1.FDConnection1;
+    QryGrid.SQL.Text :=
+      'SELECT CAST(NOME AS VARCHAR(100)) AS NOME, ' +
+      'CAST(CPF AS VARCHAR(20)) AS CPF ' +
+      'FROM USUARIOS ' +
+      'ORDER BY NOME;';
+    QryGrid.Open;
+
+    DSGrid := TDataSource.Create(FormGrid);
+    DSGrid.DataSet := QryGrid;
+
+    Grid := TDBGrid.Create(FormGrid);
+    Grid.Parent := FormGrid;
+    Grid.Align := alClient;
+    Grid.DataSource := DSGrid;
+    Grid.ReadOnly := True;
+    Grid.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.Font.Size := 10;
+
+    Grid.Columns[0].Title.Caption := 'Nome';
+    Grid.Columns[1].Title.Caption := 'CPF';
+    Grid.Columns[0].Width := 300;
+    Grid.Columns[1].Width := 150;
+
+    Grid.Tag := NativeInt(QryGrid);
+    Grid.OnDblClick := GridDblClick;
+
+    FormGrid.ShowModal;
+
+  finally
+    FormGrid.Free;
+  end;
+end;
+
+procedure TCadastro_Receita.GridDblClick(Sender: TObject);
+var
+  Grid: TDBGrid;
+  QryGrid: TFDQuery;
+  NomeSelecionado: string;
+begin
+  Grid := TDBGrid(Sender);
+  if not Assigned(Grid) then Exit;
+
+  QryGrid := TFDQuery(Pointer(Grid.Tag));
+  if not Assigned(QryGrid) then Exit;
+
+  NomeSelecionado := QryGrid.FieldByName('NOME').AsString;
+
+  if Assigned(Grid.Owner) and (Grid.Owner is TForm) then
+    (Grid.Owner as TForm).ModalResult := mrOk;
+
+  Nome.Text := NomeSelecionado;
+end;
+
+{=================================}
+{== Seleção de Refeição ========}
+{=================================}
+procedure TCadastro_Receita.SpeedButton1Click(Sender: TObject);
+begin
+  try
+    // Cria e exibe o formulário de refeições
+    Refecicao_Cadastro := TRefecicao_Cadastro.Create(Self);
+    try
+      // Mostra o form de Refeições de forma modal
+      if Refecicao_Cadastro.ShowModal = mrOk then
+      begin
+        // Pega a refeição selecionada no grid
+        if not Refecicao_Cadastro.QryRefeicao.IsEmpty then
+          DBEdit2.Text := Refecicao_Cadastro.QryRefeicao.FieldByName('NOME_REFEICAO').AsString;
+      end;
+    finally
+      Refecicao_Cadastro.Free;
+    end;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao abrir cadastro de refeições: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Receita.SpeedButton2Click(Sender: TObject);
+begin
+  try
+    // Cria e exibe o formulário de refeições
+    Dias_Semana := TDias_Semana.Create(Self);
+    try
+      // Mostra o form de Refeições de forma modal
+      if Dias_Semana.ShowModal = mrOk then
+      begin
+        // Pega a refeição selecionada no grid
+        if not Dias_Semana.QryDiaSemana.IsEmpty then
+          DBEdit3.Text := Dias_Semana.QryDiaSemana.FieldByName('NOME_DIA').AsString;
+      end;
+    finally
+      Dias_Semana.Free;
+    end;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao abrir cadastro de dia de semana: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Receita.SpeedButton4Click(Sender: TObject);
+var
+  FormGrid1: TForm;
+  Grid1: TDBGrid;
+  DSGrid1: TDataSource;
+  QryGrid1: TFDQuery;
+begin
+  FormGrid1 := TForm.Create(Self);
+  try
+    FormGrid1.Caption := 'Usuários Cadastrados';
+    FormGrid1.Width := 500;
+    FormGrid1.Height := 300;
+    FormGrid1.Position := poScreenCenter;
+    FormGrid1.BorderStyle := bsDialog;
+    FormGrid1.Color := clBtnFace;
+
+    QryGrid1 := TFDQuery.Create(FormGrid1);
+    QryGrid1.Connection := DataModule1.FDConnection1;
+    QryGrid1.SQL.Text :=
+      'SELECT CAST(NOME AS VARCHAR(100)) AS NOME, ' +
+      'CAST(CPF AS VARCHAR(20)) AS CPF ' +
+      'FROM USUARIOS ' +
+      'ORDER BY NOME;';
+    QryGrid1.Open;
+
+    DSGrid1 := TDataSource.Create(FormGrid1);
+    DSGrid1.DataSet := QryGrid1;
+
+    Grid1 := TDBGrid.Create(FormGrid1);
+    Grid1.Parent := FormGrid1;
+    Grid1.Align := alClient;
+    Grid1.DataSource := DSGrid1;
+    Grid1.ReadOnly := True;
+    Grid1.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid1.TitleFont.Style := [fsBold];
+    Grid1.Font.Size := 10;
+
+    Grid1.Columns[0].Title.Caption := 'Nome';
+    Grid1.Columns[1].Title.Caption := 'CPF';
+    Grid1.Columns[0].Width := 300;
+    Grid1.Columns[1].Width := 150;
+
+    Grid1.Tag := NativeInt(QryGrid1);
+    Grid1.OnDblClick := GridDblClick;
+
+    FormGrid1.ShowModal;
+
+  finally
+    FormGrid1.Free;
+  end;
+end;
+
+end.
+

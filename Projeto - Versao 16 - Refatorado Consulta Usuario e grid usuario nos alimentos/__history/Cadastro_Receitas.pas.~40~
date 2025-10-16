@@ -1,0 +1,132 @@
+﻿unit Cadastro_Receitas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.DBCtrls,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Data.Win.ADODB;
+
+type
+  TCadastro_Receita = class(TForm)
+    NomePessoa: TLabel;
+    Cardapio: TLabel;
+    lista_alimento: TDBGrid;
+    dblklst1: TDBLookupListBox;
+    Salvar: TButton;
+    Excluir: TButton;
+    Proximo: TButton;
+    Anterior: TButton;
+    IDcardapio: TDBLookupListBox;
+    Refeicao: TLabel;
+    DiadaSemana: TLabel;
+    dblklst2: TDBLookupListBox;
+    dblklst3: TDBLookupListBox;
+    btn1: TSpeedButton;
+    DBGrid1: TDBGrid;
+    DataSource1: TDataSource;
+    FDQuery1: TFDQuery;
+    procedure btn1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Cadastro_Receita: TCadastro_Receita;
+
+implementation
+
+{$R *.dfm}
+
+uses Conexao; // <- Importa seu DataModule com FDConnection1
+
+procedure TCadastro_Receita.btn1Click(Sender: TObject);
+var
+  FormGrid: TForm;
+  Grid: TDBGrid;
+  DSGrid, DSLookup: TDataSource;
+  QryGrid, QryLookup: TFDQuery;
+begin
+  // Cria o form modal temporário
+  FormGrid := TForm.Create(Self);
+  try
+    FormGrid.Caption := 'Usuários Cadastrados';
+    FormGrid.Width := 500;
+    FormGrid.Height := 300;
+    FormGrid.Position := poScreenCenter;
+    FormGrid.BorderStyle := bsDialog;
+    FormGrid.Color := clBtnFace;
+
+    // Cria a query para o grid modal
+    QryGrid := TFDQuery.Create(FormGrid);
+    QryGrid.Connection := DataModule1.FDConnection1;
+    QryGrid.SQL.Text :=
+      'SELECT ' +
+      '  CAST(NOME AS VARCHAR(100)) AS NOME, ' +
+      '  CAST(CPF AS VARCHAR(20)) AS CPF ' +
+      'FROM USUARIOS ' +
+      'ORDER BY NOME;';
+    QryGrid.Open;
+
+    // Cria o DataSource do grid
+    DSGrid := TDataSource.Create(FormGrid);
+    DSGrid.DataSet := QryGrid;
+
+    // Cria o DBGrid
+    Grid := TDBGrid.Create(FormGrid);
+    Grid.Parent := FormGrid;
+    Grid.Align := alClient;
+    Grid.DataSource := DSGrid;
+    Grid.ReadOnly := True;
+    Grid.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.Font.Size := 10;
+    Grid.BorderStyle := bsSingle;
+
+    // Ajusta colunas
+    Grid.Columns[0].Title.Caption := 'Nome';
+    Grid.Columns[1].Title.Caption := 'CPF';
+    Grid.Columns[0].Width := 300;
+    Grid.Columns[1].Width := 150;
+    Grid.Columns[1].Alignment := taCenter;
+    Grid.Columns[0].Alignment := taLeftJustify;
+
+    // Cria o dataset temporário que alimentará o dblklst1
+    QryLookup := TFDQuery.Create(Self);
+    QryLookup.Connection := DataModule1.FDConnection1;
+
+    DSLookup := TDataSource.Create(Self);
+    DSLookup.DataSet := QryLookup;
+
+    // Configura o DBLookupListBox (dblklst1)
+    dblklst1.ListSource := DSLookup;
+    dblklst1.ListField := 'NOME';
+
+    // Associa o evento manualmente (sem procedure anônima)
+    Grid.OnDblClick := GridDblClick;
+
+    // Usa Tag para guardar ponteiros úteis
+    Grid.Tag := NativeInt(QryGrid);
+    Grid.Hint := 'Lookup:' + IntToStr(NativeInt(QryLookup));
+
+    // Exibe o form modal
+    FormGrid.ShowModal;
+
+  finally
+    FormGrid.Free;
+  end;
+end;
+
+
+
+
+
+
+end.
+

@@ -1,0 +1,113 @@
+﻿unit Dia_Semana;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, Data.DB, Vcl.StdCtrls,
+  Vcl.Grids, Vcl.DBGrids, FireDAC.Comp.DataSet, FireDAC.Comp.Client,Conexao;
+
+type
+  TDias_Semana = class(TForm)
+    QryDiaSemana: TFDQuery;
+    DiaSemana: TDataSource;
+    LDiaSemana: TLabel;
+    edtsemana: TEdit;
+    tgridsemana: TDBGrid;
+    Salvar: TButton;
+    Excluir: TButton;
+    procedure FormShow(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure tgridsemanaDblClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+  private
+    procedure CarregarDias;
+  public
+    { Public declarations }
+  end;
+
+var
+  Dias_Semana: TDias_Semana;
+
+implementation
+
+{$R *.dfm}
+
+{ TDias_Semana }
+
+procedure TDias_Semana.CarregarDias;
+begin
+  QryDiaSemana.Close;
+  QryDiaSemana.SQL.Text := 'SELECT ID_DIA, NOME_DIA FROM DIAS_SEMANA ORDER BY ID_DIA';
+  QryDiaSemana.Open;
+end;
+
+procedure TDias_Semana.ExcluirClick(Sender: TObject);
+var
+  LID: Integer;
+begin
+  if QryDiaSemana.IsEmpty then
+  begin
+    ShowMessage('Nenhum dia selecionado.');
+    Exit;
+  end;
+
+  if MessageDlg('Deseja realmente excluir este dia da semana?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  begin
+    try
+      // 🔹 Pega o ID antes de fechar a query
+      LID := QryDiaSemana.FieldByName('ID_DIA').AsInteger;
+
+      // 🔹 Agora executa o DELETE usando o ID capturado
+      QryDiaSemana.Close;
+      QryDiaSemana.SQL.Text := 'DELETE FROM DIAS_SEMANA WHERE ID_DIA = :ID';
+      QryDiaSemana.ParamByName('ID').AsInteger := LID;
+      QryDiaSemana.ExecSQL;
+
+      ShowMessage('Dia excluída com sucesso!');
+      CarregarDias;
+    except
+      on E: Exception do
+        ShowMessage('Erro ao excluir dias: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TDias_Semana.FormShow(Sender: TObject);
+begin
+  CarregarDias;
+end;
+
+procedure TDias_Semana.SalvarClick(Sender: TObject);
+begin
+  if Trim(edtsemana.Text) = '' then
+  begin
+    ShowMessage('Digite o dia da semana antes de salvar.');
+    Exit;
+  end;
+
+  try
+    QryDiaSemana.Close;
+    QryDiaSemana.SQL.Text :=
+      'INSERT INTO DIAS_SEMANA (NOME__DIA) VALUES (:NOME_DIA)';
+    QryDiaSemana.ParamByName('NOME_DIA').AsString := edtsemana.Text;
+    QryDiaSemana.ExecSQL;
+
+    ShowMessage('Refeição salva com sucesso!');
+    edtsemana.Clear;
+    CarregarDias;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar refeição: ' + E.Message);
+  end;
+end;
+
+procedure TDias_Semana.tgridsemanaDblClick(Sender: TObject);
+begin
+  if not QryDiaSemana.IsEmpty then
+    ModalResult := mrOk;
+end;
+
+end.

@@ -1,0 +1,29 @@
+program Login;
+
+uses
+  Vcl.Forms, System.UITypes,
+  Login_user in 'Login_user.pas' {Form2},
+  Conexao in 'Conexao.pas' {DataModule1: TDataModule},
+  MenusSistema in 'MenusSistema.pas' {Form1};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+
+  Application.CreateForm(TDataModule1, DataModule1);
+  Form2 := TForm2.Create(nil);
+  try
+    if Form2.ShowModal = mrOk then
+    begin
+      Application.CreateForm(TForm1, Form1);
+      Application.Run;
+    end
+    else
+      Application.Terminate;
+  finally
+    Form2.Free;
+  end;
+end.
+

@@ -1,0 +1,188 @@
+object Cadastro_Receita: TCadastro_Receita
+  Left = 0
+  Top = 0
+  Caption = 'Cadastro de Cardapio'
+  ClientHeight = 605
+  ClientWidth = 1105
+  Color = 14085375
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  TextHeight = 15
+  object NomePessoa: TLabel
+    Left = 219
+    Top = 32
+    Width = 72
+    Height = 15
+    Caption = 'Nome Pessoa'
+  end
+  object Cardapio: TLabel
+    Left = 219
+    Top = 137
+    Width = 48
+    Height = 15
+    Caption = 'Cardapio'
+  end
+  object Refeicao: TLabel
+    Left = 230
+    Top = 67
+    Width = 45
+    Height = 15
+    Caption = 'Refeicao'
+  end
+  object DiadaSemana: TLabel
+    Left = 203
+    Top = 96
+    Width = 72
+    Height = 15
+    Caption = 'DiadaSemana'
+  end
+  object btn1: TSpeedButton
+    Left = 297
+    Top = 29
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+    OnClick = btn1Click
+  end
+  object SpeedButton1: TSpeedButton
+    Left = 297
+    Top = 65
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+    OnClick = SpeedButton1Click
+  end
+  object SpeedButton2: TSpeedButton
+    Left = 297
+    Top = 93
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+    OnClick = SpeedButton2Click
+  end
+  object Alimentos: TLabel
+    Left = 221
+    Top = 171
+    Width = 54
+    Height = 15
+    Caption = 'Alimentos'
+  end
+  object SpeedButton3: TSpeedButton
+    Left = 297
+    Top = 134
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+  end
+  object SpeedButton4: TSpeedButton
+    Left = 297
+    Top = 163
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+    OnClick = SpeedButton4Click
+  end
+  object lista_alimento: TDBGrid
+    Left = 0
+    Top = 392
+    Width = 729
+    Height = 177
+    TabOrder = 0
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -12
+    TitleFont.Name = 'Segoe UI'
+    TitleFont.Style = []
+  end
+  object Salvar: TButton
+    Left = 32
+    Top = 320
+    Width = 75
+    Height = 25
+    Caption = 'Salvar'
+    TabOrder = 1
+  end
+  object Excluir: TButton
+    Left = 152
+    Top = 320
+    Width = 75
+    Height = 25
+    Caption = 'Excluir'
+    TabOrder = 2
+  end
+  object Proximo: TButton
+    Left = 270
+    Top = 320
+    Width = 75
+    Height = 25
+    Caption = 'Proximo'
+    TabOrder = 3
+  end
+  object Anterior: TButton
+    Left = 376
+    Top = 320
+    Width = 75
+    Height = 25
+    Caption = 'Anterior'
+    TabOrder = 4
+  end
+  object Nome: TDBEdit
+    Left = 326
+    Top = 29
+    Width = 121
+    Height = 23
+    DataField = 'NOME'
+    DataSource = DataSource1
+    TabOrder = 5
+  end
+  object DBEdit1: TDBEdit
+    Left = 326
+    Top = 134
+    Width = 121
+    Height = 23
+    TabOrder = 6
+  end
+  object DBEdit2: TDBEdit
+    Left = 326
+    Top = 64
+    Width = 121
+    Height = 23
+    TabOrder = 7
+  end
+  object DBEdit3: TDBEdit
+    Left = 326
+    Top = 93
+    Width = 121
+    Height = 23
+    TabOrder = 8
+  end
+  object DBEdit4: TDBEdit
+    Left = 326
+    Top = 163
+    Width = 121
+    Height = 23
+    TabOrder = 9
+  end
+  object DataSource1: TDataSource
+    DataSet = FDQuery1
+    Left = 1040
+    Top = 160
+  end
+  object FDQuery1: TFDQuery
+    Connection = DataModule1.FDConnection1
+    FormatOptions.AssignedValues = [fvMapRules]
+    FormatOptions.OwnMapRules = True
+    FormatOptions.MapRules = <
+      item
+        SourceDataType = dtWideMemo
+        TargetDataType = dtWideString
+      end>
+    SQL.Strings = (
+      '')
+    Left = 920
+    Top = 240
+  end
+end

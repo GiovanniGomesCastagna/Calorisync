@@ -1,0 +1,221 @@
+﻿unit CadastroAlimentos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
+  Vcl.Mask, Vcl.DBCtrls, Data.DB, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
+  Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, Conexao;
+
+type
+  TCadastro_Alimentos = class(TForm)
+    Alimentos: TPanel;
+    Nome_Alimento: TLabel;
+    Peso_Alimento_gramas: TLabel;
+    Calorias_Alimentos: TLabel;
+    Alimento: TEdit;
+    Peso: TEdit;
+    Calorias: TEdit;
+    Salvar: TButton;
+    Excluir: TButton;
+    DBGrid1: TDBGrid;
+    FDQuery1: TFDQuery;
+    DataSource1: TDataSource;
+    procedure FormShow(Sender: TObject);
+    procedure DBGrid1DblClick(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+  private
+    FIDAtual: Integer;
+    procedure CarregarCampos;
+    procedure AjustarColunas;
+  public
+  end;
+
+var
+  Cadastro_Alimentos: TCadastro_Alimentos;
+
+implementation
+
+{$R *.dfm}
+
+procedure TCadastro_Alimentos.FormShow(Sender: TObject);
+begin
+  FDQuery1.Close;
+  FDQuery1.Connection := DataModule1.FDConnection1;
+
+  // Cria campos dinamicamente
+  FDQuery1.Fields.Clear;
+  FDQuery1.FieldDefs.Clear;
+  FDQuery1.FieldDefs.Add('ID_Alimento', ftInteger);
+  FDQuery1.FieldDefs.Add('Nome_alimento', ftString, 255);
+  FDQuery1.FieldDefs.Add('Caloria_Alimento', ftInteger);
+  FDQuery1.FieldDefs.Add('Peso_alimento_g', ftFloat);
+
+  FDQuery1.SQL.Text := 'SELECT ID_Alimento, Nome_alimento, Caloria_Alimento, Peso_alimento_g FROM Cadastro_alimentos';
+  FDQuery1.Open;
+
+  DataSource1.DataSet := FDQuery1;
+  DBGrid1.DataSource := DataSource1;
+  DBGrid1.Columns[0].Title.Caption := 'Nome Alimento';
+  DBGrid1.Columns[1].Title.Caption := 'Caloria Alimento';
+  DBGrid1.Columns[2].Title.Caption := 'Peso Alimento(G)';
+
+  FIDAtual := 0;
+  Salvar.Caption := 'Salvar';
+
+  AjustarColunas;
+end;
+
+procedure TCadastro_Alimentos.CarregarCampos;
+begin
+  if FDQuery1.IsEmpty then Exit;
+
+  FIDAtual := FDQuery1.FieldByName('ID_Alimento').AsInteger;
+  Alimento.Text := FDQuery1.FieldByName('Nome_alimento').AsString;
+  Calorias.Text := FDQuery1.FieldByName('Caloria_Alimento').AsString;
+  Peso.Text := FDQuery1.FieldByName('Peso_alimento_g').AsString;
+
+  Salvar.Caption := 'Atualizar';
+end;
+
+procedure TCadastro_Alimentos.DBGrid1DblClick(Sender: TObject);
+begin
+  CarregarCampos;
+end;
+
+procedure TCadastro_Alimentos.SalvarClick(Sender: TObject);
+begin
+  if (Trim(Alimento.Text) = '') or (Trim(Calorias.Text) = '') or (Trim(Peso.Text) = '') then
+  begin
+    ShowMessage('Preencha todos os campos!');
+    Exit;
+  end;
+
+  try
+    FDQuery1.Close;
+
+    if FIDAtual = 0 then
+    begin
+      // Novo registro
+      FDQuery1.SQL.Text := 'INSERT INTO Cadastro_alimentos (Nome_alimento, Caloria_Alimento, Peso_alimento_g) ' +
+                           'VALUES (:Nome, :Caloria, :Peso)';
+      FDQuery1.Params.ParamByName('Nome').AsString := Alimento.Text;
+      FDQuery1.Params.ParamByName('Caloria').AsInteger := StrToIntDef(Calorias.Text, 0);
+      FDQuery1.Params.ParamByName('Peso').AsFloat := StrToFloatDef(Peso.Text, 0);
+      FDQuery1.ExecSQL;
+      ShowMessage('Registro inserido com sucesso!');
+    end
+    else
+    begin
+      // Atualiza registro existente
+      FDQuery1.SQL.Text := 'UPDATE Cadastro_alimentos SET Nome_alimento = :Nome, Caloria_Alimento = :Caloria, ' +
+                           'Peso_alimento_g = :Peso WHERE ID_Alimento = :ID';
+      FDQuery1.Params.ParamByName('Nome').AsString := Alimento.Text;
+      FDQuery1.Params.ParamByName('Caloria').AsInteger := StrToIntDef(Calorias.Text, 0);
+      FDQuery1.Params.ParamByName('Peso').AsFloat := StrToFloatDef(Peso.Text, 0);
+      FDQuery1.Params.ParamByName('ID').AsInteger := FIDAtual;
+      FDQuery1.ExecSQL;
+      ShowMessage('Registro atualizado com sucesso!');
+    end;
+
+    // Recarrega grid
+    FDQuery1.SQL.Text := 'SELECT ID_Alimento, Nome_alimento, Caloria_Alimento, Peso_alimento_g FROM Cadastro_alimentos';
+    FDQuery1.Open;
+
+    // Limpa campos
+    Alimento.Clear;
+    Calorias.Clear;
+    Peso.Clear;
+    FIDAtual := 0;
+    Salvar.Caption := 'Salvar';
+    Alimento.SetFocus;
+
+    AjustarColunas;
+
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Alimentos.ExcluirClick(Sender: TObject);
+var
+  IDParaExcluir: Integer;
+  NomeAlimento: string;
+begin
+  // Verifica se há algum registro na query
+  if FDQuery1.IsEmpty then
+  begin
+    ShowMessage('Nenhum registro selecionado!');
+    Exit;
+  end;
+
+  // Prioriza o registro carregado nos campos, caso FIDAtual esteja definido
+  if FIDAtual <> 0 then
+    IDParaExcluir := FIDAtual
+  else
+    IDParaExcluir := FDQuery1.FieldByName('ID_Alimento').AsInteger;
+
+  NomeAlimento := FDQuery1.FieldByName('Nome_alimento').AsString;
+
+  if MessageDlg('Deseja realmente excluir o alimento "' + NomeAlimento + '"?',
+                mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  begin
+    try
+      FDQuery1.Close;
+      FDQuery1.SQL.Text := 'DELETE FROM Cadastro_alimentos WHERE ID_Alimento = :ID';
+      FDQuery1.Params.ParamByName('ID').AsInteger := IDParaExcluir;
+      FDQuery1.ExecSQL;
+
+      // Recarrega grid
+      FDQuery1.SQL.Text := 'SELECT ID_Alimento, Nome_alimento, Caloria_Alimento, Peso_alimento_g FROM Cadastro_alimentos';
+      FDQuery1.Open;
+
+      // Limpa campos
+      Alimento.Clear;
+      Calorias.Clear;
+      Peso.Clear;
+      FIDAtual := 0;
+      Salvar.Caption := 'Salvar';
+
+      AjustarColunas;
+      ShowMessage('Registro excluído com sucesso!');
+    except
+      on E: Exception do
+        ShowMessage('Erro ao excluir: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TCadastro_Alimentos.AjustarColunas;
+var
+  i, MaxWidth, ColWidth: Integer;
+  Texto: string;
+begin
+  for i := 0 to DBGrid1.Columns.Count - 1 do
+  begin
+    MaxWidth := DBGrid1.Canvas.TextWidth(DBGrid1.Columns[i].Title.Caption) + 20;
+    FDQuery1.DisableControls;
+    try
+      FDQuery1.First;
+      while not FDQuery1.Eof do
+      begin
+        Texto := FDQuery1.Fields[i].AsString;
+        ColWidth := DBGrid1.Canvas.TextWidth(Texto) + 20;
+        if ColWidth > MaxWidth then
+          MaxWidth := ColWidth;
+        FDQuery1.Next;
+      end;
+    finally
+      FDQuery1.EnableControls;
+    end;
+    DBGrid1.Columns[i].Width := MaxWidth;
+  end;
+end;
+
+end.
+

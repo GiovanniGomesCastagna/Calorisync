@@ -1,0 +1,146 @@
+unit Consulta_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Vcl.Grids, Vcl.DBGrids,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client, Conexao;
+
+type
+  TConsulta_User = class(TForm)
+    Nome_Razao_social: TLabel;
+    Documentos: TLabel;
+    Inserir_nome: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Inserir_CPF_CNPJ: TMaskEdit;
+    Senha: TLabel;
+    Digite_Senha: TEdit;
+    CRN_Panel: TPanel;
+    CRN_SIM_NAO: TLabel;
+    Nao_CRN: TRadioButton;
+    Sim_CRN: TRadioButton;
+    Digite_CRN: TMaskEdit;
+    Sxo_Panel: TPanel;
+    Sexo: TLabel;
+    Masculino: TRadioButton;
+    Feminino: TRadioButton;
+    FDQuery1: TFDQuery;
+    DBGrid1: TDBGrid;
+    Consultar: TButton;
+    Salvar: TButton;
+    DataSource1: TDataSource;
+    Excluir: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure ConsultarClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure DBGrid1CellClick(Column: TColumn);
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+  private
+    procedure CarregarCampos;
+  public
+  end;
+
+var
+  FrmConsulta_User: TConsulta_User;
+
+implementation
+
+{$R *.dfm}
+
+procedure TConsulta_User.FormCreate(Sender: TObject);
+begin
+  FDQuery1.Connection := DataModule1.FDConnection1;
+  DataSource1.DataSet := FDQuery1;
+  DBGrid1.DataSource := DataSource1;
+end;
+
+procedure TConsulta_User.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TConsulta_User.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  FrmConsulta_User := nil;
+end;
+
+procedure TConsulta_User.ConsultarClick(Sender: TObject);
+begin
+  FDQuery1.Close;
+  FDQuery1.SQL.Text := 'SELECT NOME, CPF, CNPJ, TIPO_CONTA, CNR, SEXO FROM Usuarios';
+  FDQuery1.Open;
+end;
+
+procedure TConsulta_User.DBGrid1CellClick(Column: TColumn);
+begin
+  CarregarCampos;
+end;
+
+procedure TConsulta_User.CarregarCampos;
+begin
+  Inserir_nome.Text       := FDQuery1.FieldByName('NOME').AsString;
+  Inserir_CPF_CNPJ.Text   := FDQuery1.FieldByName('CPF').AsString;
+  Digite_CRN.Text         := FDQuery1.FieldByName('CNR').AsString;
+
+  if FDQuery1.FieldByName('SEXO').AsString = 'M' then
+    Masculino.Checked := True
+  else if FDQuery1.FieldByName('SEXO').AsString = 'F' then
+    Feminino.Checked := True;
+
+  if FDQuery1.FieldByName('TIPO_CONTA').AsString = 'CPF' then
+    CPF.Checked := True
+  else if FDQuery1.FieldByName('TIPO_CONTA').AsString = 'CNPJ' then
+    CNPJ.Checked := True;
+
+  if FDQuery1.FieldByName('CNR').AsString <> '' then
+    Sim_CRN.Checked := True
+  else
+    Nao_CRN.Checked := True;
+end;
+
+procedure TConsulta_User.SalvarClick(Sender: TObject);
+begin
+  if FDQuery1.State in [dsInsert, dsEdit] then
+  begin
+    FDQuery1.FieldByName('NOME').AsString := Inserir_nome.Text;
+    FDQuery1.FieldByName('CPF').AsString  := Inserir_CPF_CNPJ.Text;
+    FDQuery1.FieldByName('CNR').AsString  := Digite_CRN.Text;
+
+    if Masculino.Checked then
+      FDQuery1.FieldByName('SEXO').AsString := 'M'
+    else if Feminino.Checked then
+      FDQuery1.FieldByName('SEXO').AsString := 'F';
+
+    if CPF.Checked then
+      FDQuery1.FieldByName('TIPO_CONTA').AsString := 'CPF'
+    else if CNPJ.Checked then
+      FDQuery1.FieldByName('TIPO_CONTA').AsString := 'CNPJ';
+
+    FDQuery1.Post;
+    FDQuery1.Refresh;
+  end
+  else
+  begin
+    FDQuery1.Append;
+    SalvarClick(Sender); // chama recursivamente para salvar
+  end;
+end;
+
+procedure TConsulta_User.ExcluirClick(Sender: TObject);
+begin
+  if not FDQuery1.IsEmpty then
+    if MessageDlg('Deseja realmente excluir este registro?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+      FDQuery1.Delete;
+end;
+
+end.
+

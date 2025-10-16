@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2025/03/27 19:29:15.000.822,=C:\Users\erive\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/07/31 21:21:02.000.442,=C:\Users\erive\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/07/31 21:50:27.000.822,C:\Calorisync\Calorisync\Projeto\UnitCalori.pas=C:\Users\erive\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/07/31 21:50:27.000.822,C:\Calorisync\Calorisync\Projeto\UnitCalori.dfm=C:\Users\erive\OneDrive\Documentos\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2025/07/31 21:50:41.000.340,C:\Calorisync\Calorisync\Projeto\ProjectCalori.dproj=C:\Users\erive\OneDrive\Documentos\Embarcadero\Studio\Projects\Project2.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

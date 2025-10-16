@@ -1,0 +1,255 @@
+unit Cadastro_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.ExtCtrls, Vcl.Mask,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
+  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async,
+  FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client, Conexao;
+
+type
+  TCadastro_Usuario = class(TForm)
+    Nome_Razao_social: TLabel;
+    Inserir_nome: TEdit;
+    Digite_CRN: TMaskEdit;
+    Digite_Senha: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Nao_CRN: TRadioButton;
+    Sim_CRN: TRadioButton;
+    Senha: TLabel;
+    CRN_SIM_NAO: TLabel;
+    Cadastrar: TButton;
+    Editar: TButton;
+    Excluir: TButton;
+    Painel_Cad: TPanel;
+    Sexo: TLabel;
+    Masculino: TRadioButton;
+    Feminino: TRadioButton;
+    Documentos: TLabel;
+    Inserir_CPF_CNPJ: TMaskEdit;
+    FDQuery1: TFDQuery;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormResize(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure CPFClick(Sender: TObject);
+    procedure CNPJClick(Sender: TObject);
+    procedure Sim_CRNClick(Sender: TObject);
+    procedure Nao_CRNClick(Sender: TObject);
+    procedure CadastrarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+  private
+    procedure CentralizarPainel;
+    function RetirarMascara(const Valor: string): string;
+    function SexoSelecionado: string;
+  public
+  end;
+
+var
+  Cadastro_Usuario: TCadastro_Usuario;
+
+implementation
+
+{$R *.dfm}
+
+procedure TCadastro_Usuario.CentralizarPainel;
+begin
+  Painel_Cad.Left := (ClientWidth - Painel_Cad.Width) div 2;
+  Painel_Cad.Top := (ClientHeight - Painel_Cad.Height) div 2;
+end;
+
+procedure TCadastro_Usuario.FormCreate(Sender: TObject);
+begin
+  Position := poScreenCenter;
+  CentralizarPainel;
+
+  // Configuração inicial do CPF
+  CPF.Checked := True;
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+
+  // Configuração inicial do CRN (desativado)
+  Nao_CRN.Checked := True;
+  Digite_CRN.Clear;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Cursor := crDefault;
+end;
+
+procedure TCadastro_Usuario.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  Cadastro_Usuario := nil;
+end;
+
+procedure TCadastro_Usuario.FormResize(Sender: TObject);
+begin
+  CentralizarPainel;
+end;
+
+procedure TCadastro_Usuario.CPFClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+end;
+
+procedure TCadastro_Usuario.CNPJClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '00.000.000/0000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+end;
+
+procedure TCadastro_Usuario.Sim_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.EditMask := '\C\R\N\-0/0000;0;_';  // Prefixo fixo CRN-
+  Digite_CRN.ReadOnly := False;
+  Digite_CRN.Enabled := True;
+  Digite_CRN.Text := '';
+  Digite_CRN.Cursor := crIBeam;
+  Digite_CRN.SetFocus;
+  Digite_CRN.SelStart := Length('CRN-'); // cursor no final do prefixo fixo
+end;
+
+procedure TCadastro_Usuario.Nao_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.Clear;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.Cursor := crDefault;
+end;
+
+function TCadastro_Usuario.RetirarMascara(const Valor: string): string;
+var
+  i: Integer;
+  c: Char;
+  Resultado: string;
+begin
+  Resultado := '';
+  for i := 1 to Length(Valor) do
+  begin
+    c := Valor[i];
+    if CharInSet(c, ['0'..'9']) then
+      Resultado := Resultado + c;
+  end;
+  Result := Resultado;
+end;
+
+function TCadastro_Usuario.SexoSelecionado: string;
+begin
+  if Masculino.Checked then
+    Result := 'M'
+  else if Feminino.Checked then
+    Result := 'F'
+  else
+    Result := '';
+end;
+
+procedure TCadastro_Usuario.CadastrarClick(Sender: TObject);
+var
+  cpfStr, cnpjStr, cnrStr: string;
+begin
+  try
+    // Ensure the database connection is active
+    if not DataModule1.FDConnection1.Connected then
+      DataModule1.FDConnection1.Open;
+
+    // Assign the connection to the query
+    FDQuery1.Connection := DataModule1.FDConnection1;
+
+    // Extract values from the input fields, removing the mask characters
+    if CPF.Checked then
+    begin
+      cpfStr := RetirarMascara(Inserir_CPF_CNPJ.Text);
+      cnpjStr := '';
+    end
+    else if CNPJ.Checked then
+    begin
+      cnpjStr := RetirarMascara(Inserir_CPF_CNPJ.Text);
+      cpfStr := '';
+    end
+    else
+    begin
+      cpfStr := '';
+      cnpjStr := '';
+    end;
+
+    // Handle the CRN field
+    if Sim_CRN.Checked then
+      cnrStr := RetirarMascara(StringReplace(Digite_CRN.Text, 'CRN-', '', [rfReplaceAll]))
+    else
+      cnrStr := '';
+
+    // Prepare the SQL query
+    FDQuery1.Close;
+    FDQuery1.SQL.Clear;
+    FDQuery1.Params.Clear;
+
+    FDQuery1.SQL.Add('INSERT INTO USUARIOS (NOME, CPF, CNPJ, CNR, SENHA, SEXO, TIPO_CONTA) ' +
+                     'VALUES (:NOME, :CPF, :CNPJ, :CNR, :SENHA, :SEXO, :TIPO_CONTA)');
+
+    // Assign parameters from the form fields
+    FDQuery1.Params.ParamByName('NOME').AsString := Inserir_nome.Text;
+    FDQuery1.Params.ParamByName('CPF').AsString := cpfStr;
+    FDQuery1.Params.ParamByName('CNPJ').AsString := cnpjStr;
+    FDQuery1.Params.ParamByName('CNR').AsString := cnrStr;
+    FDQuery1.Params.ParamByName('SENHA').AsString := Digite_Senha.Text;
+    FDQuery1.Params.ParamByName('SEXO').AsString := SexoSelecionado;
+    FDQuery1.Params.ParamByName('TIPO_CONTA').AsString := 'U';
+
+    // Execute the query
+    FDQuery1.ExecSQL;
+
+    ShowMessage('Cadastro realizado com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao cadastrar: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Usuario.ExcluirClick(Sender: TObject);
+var
+  cpfStr: string;
+begin
+  try
+    FDQuery1.Connection := DataModule1.FDConnection1;
+
+    if CPF.Checked then
+      cpfStr := RetirarMascara(Inserir_CPF_CNPJ.Text)
+    else
+      cpfStr := '';
+
+    if cpfStr = '' then
+    begin
+      ShowMessage('Informe o CPF para exclusão.');
+      Exit;
+    end;
+
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('DELETE FROM USUARIOS WHERE CPF = :CPF');
+    FDQuery1.Params.ParamByName('CPF').AsString := cpfStr;
+    FDQuery1.ExecSQL;
+
+    ShowMessage('Registro excluído com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao excluir: ' + E.Message);
+  end;
+end;
+
+end.
+

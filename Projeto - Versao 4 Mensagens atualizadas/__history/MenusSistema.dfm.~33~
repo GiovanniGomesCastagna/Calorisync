@@ -1,0 +1,51 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'MenuSistema'
+  ClientHeight = 448
+  ClientWidth = 737
+  Color = 2127103
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  FormStyle = fsMDIForm
+  Menu = MainMenu1
+  Position = poScreenCenter
+  Visible = True
+  WindowState = wsMaximized
+  TextHeight = 15
+  object MainMenu1: TMainMenu
+    Left = 56
+    Top = 24
+    object Cadastro1: TMenuItem
+      Caption = 'Cadastro'
+      object Cadastro2: TMenuItem
+        Caption = 'Cadastro Usuarios'
+        OnClick = Cadastro2Click
+      end
+      object CadastroAlimentos1: TMenuItem
+        Caption = 'Cadastro Alimentos'
+      end
+      object CadastroExercicios1: TMenuItem
+        Caption = 'Cadastro Exercicios'
+      end
+    end
+    object Consulta1: TMenuItem
+      Caption = 'Consulta'
+      object reinos1: TMenuItem
+        Caption = 'Treinos'
+      end
+      object Cardapio1: TMenuItem
+        Caption = 'Cardapio'
+      end
+    end
+    object Relatorio1: TMenuItem
+      Caption = 'Relatorio'
+      object Relatorio2: TMenuItem
+        Caption = 'Historico Calorias Consumidas'
+      end
+    end
+  end
+end

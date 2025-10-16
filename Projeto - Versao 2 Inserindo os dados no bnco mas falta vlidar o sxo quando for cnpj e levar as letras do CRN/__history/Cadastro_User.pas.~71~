@@ -1,0 +1,355 @@
+unit Cadastro_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.ExtCtrls, Vcl.Mask,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
+  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async,
+  FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client, Conexao;
+
+type
+  TCadastro_Usuario = class(TForm)
+    Nome_Razao_social: TLabel;
+    Inserir_nome: TEdit;
+    Digite_CRN: TMaskEdit;
+    Digite_Senha: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Nao_CRN: TRadioButton;
+    Sim_CRN: TRadioButton;
+    Senha: TLabel;
+    CRN_SIM_NAO: TLabel;
+    Cadastrar: TButton;
+    Editar: TButton;
+    Excluir: TButton;
+    Painel_Cad: TPanel;
+    Sexo: TLabel;
+    Masculino: TRadioButton;
+    Feminino: TRadioButton;
+    Documentos: TLabel;
+    Inserir_CPF_CNPJ: TMaskEdit;
+    FDQuery1: TFDQuery;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormResize(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure CPFClick(Sender: TObject);
+    procedure CNPJClick(Sender: TObject);
+    procedure Sim_CRNClick(Sender: TObject);
+    procedure Nao_CRNClick(Sender: TObject);
+    procedure CadastrarClick(Sender: TObject); // Evento OnClick do botão
+  private
+    procedure CentralizarPainel;
+    function RetirarMascara(const Valor: string): string;
+    function SexoSelecionado: string;
+  public
+  end;
+
+var
+  Cadastro_Usuario: TCadastro_Usuario;
+
+implementation
+
+{$R *.dfm}
+
+//==============================================================================
+//  NOVO PROCEDIMENTO DO BOTÃO CADASTRAR
+//==============================================================================
+procedure TCadastro_Usuario.CadastrarClick(Sender: TObject);
+var
+  vNome, vCPF, vCNPJ, vTipoConta, vCNR, vSenha, vSexo: string;
+begin
+  // --- 1. Validação dos Campos ---
+  if Trim(Inserir_nome.Text) = '' then
+  begin
+    ShowMessage('O campo Nome/Razão Social é obrigatório.');
+    Inserir_nome.SetFocus;
+    Exit;
+  end;
+
+  if Trim(Digite_Senha.Text) = '' then
+  begin
+    ShowMessage('O campo Senha é obrigatório.');
+    Digite_Senha.SetFocus;
+    Exit;
+  end;
+
+  // --- 2. Coleta dos Dados do Formulário ---
+  vNome := Trim(Inserir_nome.Text);
+  vSenha := Digite_Senha.Text; // A senha não deve ter espaços cortados (Trim)
+  vSexo := SexoSelecionado;
+  vCNR := '';
+  vCPF := '';
+  vCNPJ := '';
+
+  // Define o tipo de conta e coleta o documento
+  if CPF.Checked then
+  begin
+    vTipoConta := 'F'; // Pessoa Física
+    vCPF := RetirarMascara(Inserir_CPF_CNPJ.Text);
+    if Length(vCPF) <> 11 then
+    begin
+      ShowMessage('O CPF informado é inválido. Verifique o número digitado.');
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+  end
+  else if CNPJ.Checked then
+  begin
+    vTipoConta := 'J'; // Pessoa Jurídica
+    vCNPJ := RetirarMascara(Inserir_CPF_CNPJ.Text);
+     if Length(vCNPJ) <> 14 then
+    begin
+      ShowMessage('O CNPJ informado é inválido. Verifique o número digitado.');
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+  end
+  else
+  begin
+    ShowMessage('Selecione um tipo de documento (CPF ou CNPJ).');
+    Exit;
+  end;
+
+  // Coleta o CNR se estiver preenchido
+  if Sim_CRN.Checked then
+  begin
+    vCNR := RetirarMascara(Digite_CRN.Text);
+  end;
+
+  // --- 3. Preparação e Execução da Query ---
+  FDQuery1.Close;
+  FDQuery1.SQL.Clear;
+  FDQuery1.SQL.Add('INSERT INTO USUARIOS (NOME, CPF, CNPJ, TIPO_CONTA, CNR, SENHA, SEXO)');
+  FDQuery1.SQL.Add('VALUES (:NOME, :CPF, :CNPJ, :TIPO_CONTA, :CNR, :SENHA, :SEXO)');
+
+  // Atribui os valores aos parâmetros para evitar SQL Injection
+  FDQuery1.ParamByName('NOME').AsString := vNome;
+  FDQuery1.ParamByName('CPF').AsString := vCPF;
+  FDQuery1.ParamByName('CNPJ').AsString := vCNPJ;
+  FDQuery1.ParamByName('TIPO_CONTA').AsString := vTipoConta;
+  FDQuery1.ParamByName('CNR').AsString := vCNR;
+  FDQuery1.ParamByName('SENHA').AsString := vSenha;
+  FDQuery1.ParamByName('SEXO').AsString := vSexo;
+
+  try
+    FDQuery1.ExecSQL;
+    ShowMessage('Usuário cadastrado com sucesso!');
+    // Opcional: Limpar os campos após o cadastro
+    // FormCreate(nil); // Re-chama o create para resetar o form
+  except
+    on E: Exception do
+    begin
+      ShowMessage('Erro ao cadastrar usuário: ' + E.Message);
+    end;
+  end;
+end;
+
+//==============================================================================
+//  SEU CÓDIGO EXISTENTE (sem alterações)
+//==============================================================================
+
+procedure TCadastro_Usuario.CentralizarPainel;
+begin
+  Painel_Cad.Left := (ClientWidth - Painel_Cad.Width) div 2;
+  Painel_Cad.Top := (ClientHeight - Painel_Cad.Height) div 2;
+end;
+
+procedure TCadastro_Usuario.FormCreate(Sender: TObject);
+begin
+  Position := poScreenCenter;
+  CentralizarPainel;
+
+  // Configuração inicial do CPF
+  CPF.Checked := True;
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+
+  // Configuração inicial do CRN (desativado)
+  Nao_CRN.Checked := True;
+  Digite_CRN.Clear;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Cursor := crDefault;
+end;
+
+procedure TCadastro_Usuario.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  Cadastro_Usuario := nil;
+end;
+
+procedure TCadastro_Usuario.FormResize(Sender: TObject);
+begin
+  CentralizarPainel;
+end;
+
+procedure TCadastro_Usuario.CPFClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+end;
+
+procedure TCadastro_Usuario.CNPJClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '00.000.000/0000-00;0;_';
+  Inserir_CPF_CNPJ.ReadOnly := False;
+  Inserir_CPF_CNPJ.Enabled := True;
+  Inserir_CPF_CNPJ.Text := '';
+  Inserir_CPF_CNPJ.Visible := True;
+  Inserir_CPF_CNPJ.SetFocus;
+  Inserir_CPF_CNPJ.SelStart := 0;
+end;
+
+procedure TCadastro_Usuario.Sim_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.EditMask := '\C\R\N\-0/0000;0;_';  // Prefixo fixo CRN-
+  Digite_CRN.ReadOnly := False;
+  Digite_CRN.Enabled := True;
+  Digite_CRN.Text := '';
+  Digite_CRN.Cursor := crIBeam;
+  Digite_CRN.SetFocus;
+  Digite_CRN.SelStart := Length('CRN-'); // cursor no final do prefixo fixo
+end;
+
+procedure TCadastro_Usuario.Nao_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.Clear;
+  Digite_CRN.ReadOnly := True;
+  Digite_CRN.Enabled := False;
+  Digite_CRN.Cursor := crDefault;
+end;
+
+function TCadastro_Usuario.RetirarMascara(const Valor: string): string;
+var
+  i: Integer;
+  c: Char;
+  Resultado: string;
+begin
+  Resultado := '';
+  for i := 1 to Length(Valor) do
+  begin
+    c := Valor[i];
+    if CharInSet(c, ['0'..'9']) then
+      Resultado := Resultado + c;
+  end;
+  Result := Resultado;
+end;
+
+function TCadastro_Usuario.SexoSelecionado: string;
+begin
+  if Masculino.Checked then
+    Result := 'M'
+  else if Feminino.Checked then
+    Result := 'F'
+  else
+    Result := '';
+end;
+
+procedure TCadastro_Usuario.CadastrarClick(Sender: TObject);
+var
+  vNome, vCPF, vCNPJ, vTipoConta, vCNR, vSenha, vSexo: string;
+begin
+  // 1. Validação dos campos obrigatórios
+  if Trim(Inserir_nome.Text) = '' then
+  begin
+    ShowMessage('O campo Nome/Razão Social é obrigatório.');
+    Inserir_nome.SetFocus;
+    Exit; // Interrompe a execução se o nome estiver vazio
+  end;
+
+  if Trim(Digite_Senha.Text) = '' then
+  begin
+    ShowMessage('O campo Senha é obrigatório.');
+    Digite_Senha.SetFocus;
+    Exit; // Interrompe a execução se a senha estiver vazia
+  end;
+
+  // 2. Coleta dos dados do formulário
+  vNome := Trim(Inserir_nome.Text);
+  vSenha := Digite_Senha.Text; // A senha é salva como foi digitada
+  vSexo := SexoSelecionado;
+  vCNR := '';
+  vCPF := '';
+  vCNPJ := '';
+
+  // Define o tipo de conta (Pessoa Física ou Jurídica) e coleta o documento
+  if CPF.Checked then
+  begin
+    vTipoConta := 'F'; // 'F' para Pessoa Física
+    vCPF := RetirarMascara(Inserir_CPF_CNPJ.Text);
+    if Length(vCPF) <> 11 then
+    begin
+      ShowMessage('O CPF informado é inválido. Verifique o número digitado.');
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+  end
+  else if CNPJ.Checked then
+  begin
+    vTipoConta := 'J'; // 'J' para Pessoa Jurídica
+    vCNPJ := RetirarMascara(Inserir_CPF_CNPJ.Text);
+    if Length(vCNPJ) <> 14 then
+    begin
+      ShowMessage('O CNPJ informado é inválido. Verifique o número digitado.');
+      Inserir_CPF_CNPJ.SetFocus;
+      Exit;
+    end;
+  end
+  else
+  begin
+    // Caso nenhum tipo de documento seja selecionado
+    ShowMessage('Selecione um tipo de documento (CPF ou CNPJ).');
+    Exit;
+  end;
+
+  // Coleta o CNR se a opção "Sim" estiver marcada
+  if Sim_CRN.Checked then
+  begin
+    vCNR := RetirarMascara(Digite_CRN.Text);
+  end;
+
+  // 3. Preparação e execução da instrução SQL
+  FDQuery1.Close;
+  FDQuery1.SQL.Clear;
+  FDQuery1.SQL.Add('INSERT INTO USUARIOS (NOME, CPF, CNPJ, TIPO_CONTA, CNR, SENHA, SEXO)');
+  FDQuery1.SQL.Add('VALUES (:NOME, :CPF, :CNPJ, :TIPO_CONTA, :CNR, :SENHA, :SEXO)');
+
+  // Atribui os valores aos parâmetros da query
+  FDQuery1.ParamByName('NOME').AsString := vNome;
+  FDQuery1.ParamByName('CPF').AsString := vCPF;
+  FDQuery1.ParamByName('CNPJ').AsString := vCNPJ;
+  FDQuery1.ParamByName('TIPO_CONTA').AsString := vTipoConta;
+  FDQuery1.ParamByName('CNR').AsString := vCNR;
+  FDQuery1.ParamByName('SENHA').AsString := vSenha; // Idealmente, a senha deve ser criptografada antes de salvar
+  FDQuery1.ParamByName('SEXO').AsString := vSexo;
+
+  // 4. Execução e tratamento de exceções
+  try
+    FDQuery1.ExecSQL;
+    ShowMessage('Usuário cadastrado com sucesso!');
+
+    // Opcional: Limpar os campos do formulário após o sucesso
+    FormCreate(nil); // Reseta o formulário para o estado inicial
+
+  except
+    on E: Exception do
+    begin
+      // Exibe uma mensagem de erro caso algo falhe no banco de dados
+      ShowMessage('Erro ao cadastrar usuário: ' + E.Message);
+    end;
+  end;
+end;
+
+
+end.
+
