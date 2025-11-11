@@ -1,0 +1,73 @@
+object Dias_Semana: TDias_Semana
+  Left = 0
+  Top = 0
+  Caption = 'Dias da Semana'
+  ClientHeight = 209
+  ClientWidth = 255
+  Color = 14085375
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  Position = poScreenCenter
+  OnKeyDown = FormKeyDown
+  OnShow = FormShow
+  TextHeight = 15
+  object LDiaSemana: TLabel
+    Left = 16
+    Top = 11
+    Width = 67
+    Height = 15
+    Caption = 'Dias Semana'
+  end
+  object edtsemana: TEdit
+    Left = 89
+    Top = 8
+    Width = 121
+    Height = 23
+    TabOrder = 0
+  end
+  object tgridsemana: TDBGrid
+    Left = 16
+    Top = 88
+    Width = 235
+    Height = 120
+    DataSource = DiaSemana
+    TabOrder = 1
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -12
+    TitleFont.Name = 'Segoe UI'
+    TitleFont.Style = []
+    OnDblClick = tgridsemanaDblClick
+  end
+  object Salvar: TButton
+    Left = 16
+    Top = 48
+    Width = 75
+    Height = 25
+    Caption = 'Salvar'
+    TabOrder = 2
+    OnClick = SalvarClick
+  end
+  object Excluir: TButton
+    Left = 176
+    Top = 48
+    Width = 75
+    Height = 25
+    Caption = 'Excluir'
+    TabOrder = 3
+    OnClick = ExcluirClick
+  end
+  object QryDiaSemana: TFDQuery
+    Connection = DataModule1.FDConnection1
+    SQL.Strings = (
+      'Select * from dias_semana')
+    Left = 264
+    Top = 8
+  end
+  object DiaSemana: TDataSource
+    DataSet = QryDiaSemana
+  end
+end

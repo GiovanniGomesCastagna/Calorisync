@@ -1,0 +1,162 @@
+object DMCadastro_Treino: TDMCadastro_Treino
+  Left = 0
+  Top = 0
+  Caption = 'Cadastro de Treinos'
+  ClientHeight = 553
+  ClientWidth = 763
+  Color = 2127103
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  KeyPreview = True
+  Position = poScreenCenter
+  OnShow = FormShow
+  TextHeight = 13
+  object lblPessoa: TLabel
+    Left = 186
+    Top = 32
+    Width = 35
+    Height = 13
+    Caption = 'Pessoa'
+  end
+  object btnPessoa: TSpeedButton
+    Left = 227
+    Top = 28
+    Width = 23
+    Height = 22
+    Caption = '[...]'
+    OnClick = btnPessoaClick
+  end
+  object lblPeriodo: TLabel
+    Left = 64
+    Top = 96
+    Width = 48
+    Height = 13
+    Caption = 'Per'#195#173'odo'
+  end
+  object lblFrequencia: TLabel
+    Left = 181
+    Top = 160
+    Width = 62
+    Height = 13
+    Caption = 'Frequ'#195#170'ncia'
+  end
+  object GridExercicio: TDBGrid
+    Left = 24
+    Top = 408
+    Width = 692
+    Height = 120
+    TabOrder = 0
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -11
+    TitleFont.Name = 'Segoe UI'
+    TitleFont.Style = []
+  end
+  object edtNomePessoa: TEdit
+    Left = 256
+    Top = 29
+    Width = 121
+    Height = 21
+    TabOrder = 1
+  end
+  object btnNovo: TButton
+    Left = 88
+    Top = 312
+    Width = 75
+    Height = 25
+    Caption = 'Novo'
+    TabOrder = 2
+    OnClick = btnNovoClick
+  end
+  object btnSalvar: TButton
+    Left = 235
+    Top = 312
+    Width = 75
+    Height = 25
+    Caption = 'Salvar'
+    TabOrder = 3
+    OnClick = btnSalvarClick
+  end
+  object btnExcluir: TButton
+    Left = 368
+    Top = 312
+    Width = 75
+    Height = 25
+    Caption = 'Excluir'
+    TabOrder = 4
+    OnClick = btnExcluirClick
+  end
+  object btnCancelar: TButton
+    Left = 496
+    Top = 312
+    Width = 75
+    Height = 25
+    Caption = 'Cancelar'
+    TabOrder = 5
+    OnClick = btnCancelarClick
+  end
+  object dtpInicio: TDateTimePicker
+    Left = 124
+    Top = 96
+    Width = 186
+    Height = 21
+    Date = 45967.000000000000000000
+    Time = 0.901879085649852600
+    TabOrder = 6
+  end
+  object dtpFim: TDateTimePicker
+    Left = 345
+    Top = 96
+    Width = 186
+    Height = 21
+    Date = 45967.000000000000000000
+    Time = 0.902032002311898400
+    TabOrder = 7
+  end
+  object cbbFrequencia: TComboBox
+    Left = 272
+    Top = 157
+    Width = 145
+    Height = 21
+    TabOrder = 8
+    Items.Strings = (
+      '1x por semana'
+      '2x por semana'
+      '3x por semana'
+      '4x por semana'
+      '5x por semana'
+      '6x por semana'
+      '7x por semana')
+  end
+  object btnFiltrar: TButton
+    Left = 504
+    Top = 224
+    Width = 75
+    Height = 25
+    Caption = 'Filtrar'
+    TabOrder = 9
+    OnClick = btnFiltrarClick
+  end
+  object Gerar_cronograma: TButton
+    Left = 288
+    Top = 208
+    Width = 145
+    Height = 25
+    Caption = 'Gerar Cronograma'
+    TabOrder = 10
+    OnClick = Gerar_cronogramaClick
+  end
+  object fdqryTreino: TFDQuery
+    Connection = DataModule1.FDConnection1
+    Left = 664
+    Top = 24
+  end
+  object dsTreino: TDataSource
+    DataSet = fdqryTreino
+    Left = 608
+    Top = 16
+  end
+end

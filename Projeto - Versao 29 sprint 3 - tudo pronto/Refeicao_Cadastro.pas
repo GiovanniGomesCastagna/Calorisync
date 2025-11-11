@@ -1,0 +1,120 @@
+﻿unit Refeicao_Cadastro;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Data.DB, Vcl.Grids,
+  Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  conexao;
+
+type
+  TRefecicao_Cadastro = class(TForm)
+    Refeicao: TLabel;
+    Nome_refeicao: TEdit;
+    DBGrid1: TDBGrid;
+    QryRefeicao: TFDQuery;
+    DataSource1: TDataSource;
+    Salvar: TButton;
+    Excluir: TButton;
+    procedure FormShow(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+    procedure DBGrid1DblClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  private
+    procedure CarregarRefeicoes;
+  public
+  end;
+
+var
+  Refecicao_Cadastro: TRefecicao_Cadastro;
+
+implementation
+
+{$R *.dfm}
+
+procedure TRefecicao_Cadastro.CarregarRefeicoes;
+begin
+  QryRefeicao.Close;
+  QryRefeicao.SQL.Text := 'SELECT ID_REFEICAO, NOME_REFEICAO FROM REFEICOES ORDER BY ID_REFEICAO';
+  QryRefeicao.Open;
+end;
+
+procedure TRefecicao_Cadastro.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+    if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TRefecicao_Cadastro.FormShow(Sender: TObject);
+begin
+  CarregarRefeicoes;
+end;
+
+procedure TRefecicao_Cadastro.SalvarClick(Sender: TObject);
+begin
+  if Trim(Nome_refeicao.Text) = '' then
+  begin
+    ShowMessage('Digite o nome da refeição antes de salvar.');
+    Exit;
+  end;
+
+  try
+    QryRefeicao.Close;
+    QryRefeicao.SQL.Text :=
+      'INSERT INTO REFEICOES (NOME_REFEICAO) VALUES (:NOME_REFEICAO)';
+    QryRefeicao.ParamByName('NOME_REFEICAO').AsString := Nome_refeicao.Text;
+    QryRefeicao.ExecSQL;
+
+    ShowMessage('Refeição salva com sucesso!');
+    Nome_refeicao.Clear;
+    CarregarRefeicoes;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar refeição: ' + E.Message);
+  end;
+end;
+
+procedure TRefecicao_Cadastro.DBGrid1DblClick(Sender: TObject);
+begin
+  if not QryRefeicao.IsEmpty then
+    ModalResult := mrOk;
+end;
+
+procedure TRefecicao_Cadastro.ExcluirClick(Sender: TObject);
+var
+  LID: Integer;
+begin
+  if QryRefeicao.IsEmpty then
+  begin
+    ShowMessage('Nenhuma refeição selecionada.');
+    Exit;
+  end;
+
+  if MessageDlg('Deseja realmente excluir esta refeição?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  begin
+    try
+      LID := QryRefeicao.FieldByName('ID_REFEICAO').AsInteger;
+
+      QryRefeicao.Close;
+      QryRefeicao.SQL.Text := 'DELETE FROM REFEICOES WHERE ID_REFEICAO = :ID';
+      QryRefeicao.ParamByName('ID').AsInteger := LID;
+      QryRefeicao.ExecSQL;
+
+      ShowMessage('Refeição excluída com sucesso!');
+      CarregarRefeicoes;
+    except
+      on E: Exception do
+        ShowMessage('Erro ao excluir refeição: ' + E.Message);
+    end;
+  end;
+end;
+
+
+
+end.
+

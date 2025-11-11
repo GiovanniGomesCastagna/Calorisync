@@ -1,0 +1,250 @@
+﻿unit Consulta_User;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Vcl.Grids, Vcl.DBGrids,
+  Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Mask, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet,
+  FireDAC.Comp.Client, Conexao, System.StrUtils, Vcl.Imaging.pngimage;
+
+type
+  TConsulta_User = class(TForm)
+    Nome_Razao_social: TLabel;
+    Documentos: TLabel;
+    Inserir_nome: TEdit;
+    CNPJ: TRadioButton;
+    CPF: TRadioButton;
+    Inserir_CPF_CNPJ: TMaskEdit;
+    Senha: TLabel;
+    Digite_Senha: TEdit;
+    CRN_Panel: TPanel;
+    CRN_SIM_NAO: TLabel;
+    Nao_CRN: TRadioButton;
+    Sim_CRN: TRadioButton;
+    Digite_CRN: TMaskEdit;
+    Sxo_Panel: TPanel;
+    Sexo: TLabel;
+    Masculino: TRadioButton;
+    Feminino: TRadioButton;
+    FDQuery1: TFDQuery;
+    DBGrid1: TDBGrid;
+    Salvar: TButton;
+    DataSource1: TDataSource;
+    FDQuery1NOME: TWideStringField;
+    FDQuery1CPF: TWideStringField;
+    FDQuery1CNPJ: TWideStringField;
+    FDQuery1TIPO_CONTA: TWideStringField;
+    FDQuery1CNR: TWideStringField;
+    FDQuery1SEXO: TWideStringField;
+    Excluir: TButton;
+    Image2: TImage;
+    Image1: TImage;
+    Image3: TImage;
+    Image4: TImage;
+    BtnNovo: TButton;
+    btnCancelar: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormShow(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+    procedure DBGrid1DblClick(Sender: TObject);
+    procedure CNPJClick(Sender: TObject);
+    procedure CPFClick(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure Sim_CRNClick(Sender: TObject);
+    procedure Nao_CRNClick(Sender: TObject);
+    procedure AutoAjustarColunas(Grid: TDBGrid);
+    procedure DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+      DataCol: Integer; Column: TColumn; State: TGridDrawState);
+    procedure CarregarUsuarioPorDocumento(const Documento: string; IsCPF: Boolean);
+    procedure Inserir_CPF_CNPJExit(Sender: TObject);
+    procedure BtnNovoClick(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+  private
+    procedure OcultarColunaSenha;
+    procedure LimparCampos;
+    function CamposPreenchidos: Boolean;
+  public
+  end;
+
+var
+  FrmConsulta_User: TConsulta_User;
+
+implementation
+
+{$R *.dfm}
+
+procedure TConsulta_User.FormCreate(Sender: TObject);
+begin
+  FDQuery1.Connection := DataModule1.FDConnection1;
+end;
+
+procedure TConsulta_User.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TConsulta_User.FormShow(Sender: TObject);
+begin
+  FDQuery1.Close;
+  FDQuery1.SQL.Text :=
+    'SELECT NOME, CPF, CNPJ, TIPO_CONTA, CNR, SEXO, SENHA FROM Usuarios';
+  FDQuery1.Open;
+
+  OcultarColunaSenha;
+
+  FDQuery1CPF.EditMask := '000.000.000-00;0';
+  FDQuery1CNPJ.EditMask := '00.000.000/0000-00;0';
+
+  DBGrid1.Columns[3].Title.Caption := 'Tipo Conta';
+  DBGrid1.Columns[6].Visible := False;
+  AutoAjustarColunas(DBGrid1);
+end;
+
+procedure TConsulta_User.LimparCampos;
+begin
+  Inserir_nome.Clear;
+  Inserir_CPF_CNPJ.Clear;
+  Digite_Senha.Clear;
+  Digite_CRN.Clear;
+  CPF.Checked := False;
+  CNPJ.Checked := False;
+  Sim_CRN.Checked := False;
+  Nao_CRN.Checked := False;
+  Masculino.Checked := False;
+  Feminino.Checked := False;
+  Digite_CRN.Visible := False;
+  Salvar.Caption := 'Cadastrar';
+end;
+
+function TConsulta_User.CamposPreenchidos: Boolean;
+begin
+  Result :=
+    (Trim(Inserir_nome.Text) <> '') or
+    (Trim(Inserir_CPF_CNPJ.Text) <> '') or
+    (Trim(Digite_Senha.Text) <> '') or
+    (Sim_CRN.Checked or Nao_CRN.Checked) or
+    (Masculino.Checked or Feminino.Checked);
+end;
+
+procedure TConsulta_User.BtnNovoClick(Sender: TObject);
+begin
+  LimparCampos;
+  ShowMessage('Pronto para inserir um novo usuário.');
+  Inserir_nome.SetFocus;
+end;
+
+procedure TConsulta_User.btnCancelarClick(Sender: TObject);
+begin
+  if CamposPreenchidos then
+  begin
+    if MessageDlg('Deseja realmente cancelar a operação atual?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+      Exit;
+  end;
+
+  LimparCampos;
+  ShowMessage('Operação cancelada.');
+end;
+
+procedure TConsulta_User.Nao_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.Visible := False;
+  Digite_CRN.Clear;
+end;
+
+procedure TConsulta_User.Sim_CRNClick(Sender: TObject);
+begin
+  Digite_CRN.Visible := True;
+end;
+
+// --- Restante do código original mantido inalterado abaixo ---
+procedure TConsulta_User.Inserir_CPF_CNPJExit(Sender: TObject);
+begin
+  if Trim(Inserir_CPF_CNPJ.Text) <> '' then
+    CarregarUsuarioPorDocumento(Inserir_CPF_CNPJ.Text, CPF.Checked);
+end;
+
+procedure TConsulta_User.CNPJClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '00.000.000/0000-00;0';
+  Inserir_CPF_CNPJ.Clear;
+  Sxo_Panel.Visible := False;
+end;
+
+procedure TConsulta_User.CPFClick(Sender: TObject);
+begin
+  Inserir_CPF_CNPJ.EditMask := '000.000.000-00;0';
+  Inserir_CPF_CNPJ.Clear;
+  Sxo_Panel.Visible := True;
+end;
+
+procedure TConsulta_User.ExcluirClick(Sender: TObject);
+var
+  CPF_CNPJ: string;
+  Bookmark: TBookmark;
+begin
+  if FDQuery1.IsEmpty then
+  begin
+    ShowMessage('Nenhum registro selecionado!');
+    Exit;
+  end;
+
+  if MessageDlg('Deseja realmente excluir este registro?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    Exit;
+  Bookmark := FDQuery1.GetBookmark;
+  try
+    if FDQuery1.FieldByName('CPF').AsString <> '' then
+      CPF_CNPJ := FDQuery1.FieldByName('CPF').AsString
+    else
+      CPF_CNPJ := FDQuery1.FieldByName('CNPJ').AsString;
+
+    FDQuery1.Connection.ExecSQL
+      ('DELETE FROM Usuarios WHERE CPF = :CPF OR CNPJ = :CNPJ',
+      [CPF_CNPJ, CPF_CNPJ]);
+    FDQuery1.Close;
+    FDQuery1.Open;
+
+    OcultarColunaSenha;
+
+  finally
+    if FDQuery1.BookmarkValid(Bookmark) then
+      FDQuery1.GotoBookmark(Bookmark);
+    FDQuery1.FreeBookmark(Bookmark);
+  end;
+end;
+
+// --- Demais métodos originais inalterados (CarregarUsuarioPorDocumento, AutoAjustarColunas, etc.) ---
+
+procedure TConsulta_User.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  FrmConsulta_User := nil;
+end;
+
+procedure TConsulta_User.OcultarColunaSenha;
+var
+  i: Integer;
+  Col: TColumn;
+begin
+  if DBGrid1.Columns.Count = 0 then Exit;
+
+  for i := 0 to DBGrid1.Columns.Count - 1 do
+  begin
+    Col := DBGrid1.Columns[i];
+    if SameText(Col.FieldName, 'SENHA') then
+    begin
+      Col.Visible := False;
+      Exit;
+    end;
+  end;
+end;
+
+end.
+

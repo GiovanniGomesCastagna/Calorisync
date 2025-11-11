@@ -1,0 +1,307 @@
+﻿unit Cadastro_Exercicio;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB, Vcl.Grids, Vcl.DBGrids,
+  Vcl.StdCtrls, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client;
+
+type
+  TCad_Exercicio = class(TForm)
+    Nome_Exercicio: TLabel;
+    Calorias_Queimadas: TLabel;
+    Frequencia_Exercicio: TLabel;
+    Repeticao_Exercicio: TLabel;
+    Tempo: TLabel;
+    Nome_Exerc: TEdit;
+    Caloria: TEdit;
+    Frequencia: TEdit;
+    Repeticao: TEdit;
+    TempoExercicio: TEdit;
+    Salvar: TButton;
+    Excluir: TButton;
+    Grid_exercicio: TDBGrid;
+    fdqryExercicios: TFDQuery;
+    dsExercicios: TDataSource;
+    repeticao_exercicicos: TRadioButton;
+    tempo_Exercicio: TRadioButton;
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure repeticao_exercicicosClick(Sender: TObject);
+    procedure tempo_ExercicioClick(Sender: TObject);
+    procedure Grid_exercicioDblClick(Sender: TObject);
+  private
+    FIDAtual: Integer;
+    procedure AtualizarGrid;
+    procedure LimparCampos;
+    procedure AjustarColunas;
+    procedure CarregarCamposDoGrid;
+    function ValidarCampos: Boolean;
+  public
+  end;
+
+var
+  Cad_Exercicio: TCad_Exercicio;
+
+implementation
+
+uses Conexao;
+
+{$R *.dfm}
+
+procedure TCad_Exercicio.FormShow(Sender: TObject);
+begin
+  fdqryExercicios.Close;
+  fdqryExercicios.Connection := DataModule1.FDConnection1;
+
+  fdqryExercicios.SQL.Text :=
+    'SELECT ID_EXERCICIO, NOME_EXERCICIO, CALORIAS_QUEIMADAS, FREQUENCIA_EXERCICIO, ' +
+    'REPETICAO_EXERCICIO, SERIE_EXERCICIO, TEMPO_EXERCICIO FROM EXERCICIOS';
+  fdqryExercicios.Open;
+
+  dsExercicios.DataSet := fdqryExercicios;
+  Grid_exercicio.DataSource := dsExercicios;
+
+  Grid_exercicio.Columns[0].Title.Caption := 'ID EXERCÍCIO';
+  Grid_exercicio.Columns[1].Title.Caption := 'NOME EXERCÍCIO';
+  Grid_exercicio.Columns[2].Title.Caption := 'CALORIAS QUEIMADAS';
+  Grid_exercicio.Columns[3].Title.Caption := 'FREQUÊNCIA EXERCÍCIO';
+  Grid_exercicio.Columns[4].Title.Caption := 'REPETIÇÃO EXERCÍCIO';
+  Grid_exercicio.Columns[5].Title.Caption := 'SÉRIE EXERCÍCIO';
+  Grid_exercicio.Columns[6].Title.Caption := 'TEMPO EXERCÍCIO';
+
+  FIDAtual := 0;
+  Salvar.Caption := 'Salvar';
+  Excluir.Caption := 'Excluir';
+
+  repeticao_exercicicos.Checked := True;
+  repeticao_exercicicosClick(nil);
+
+  AjustarColunas;
+end;
+
+procedure TCad_Exercicio.AtualizarGrid;
+begin
+  fdqryExercicios.Close;
+  fdqryExercicios.Open;
+  AjustarColunas;
+end;
+
+procedure TCad_Exercicio.LimparCampos;
+begin
+  Nome_Exerc.Clear;
+  Caloria.Clear;
+  Frequencia.Clear;
+  Repeticao.Clear;
+  TempoExercicio.Clear;
+  FIDAtual := 0;
+  Salvar.Caption := 'Salvar';
+end;
+
+function TCad_Exercicio.ValidarCampos: Boolean;
+begin
+  Result := False;
+
+  if Trim(Nome_Exerc.Text) = '' then
+  begin
+    ShowMessage('Informe o nome do exercício.');
+    Nome_Exerc.SetFocus;
+    Exit;
+  end;
+
+  if Trim(Caloria.Text) = '' then
+  begin
+    ShowMessage('Informe a quantidade de calorias queimadas.');
+    Caloria.SetFocus;
+    Exit;
+  end;
+
+  if Trim(Frequencia.Text) = '' then
+  begin
+    ShowMessage('Informe a frequência do exercício.');
+    Frequencia.SetFocus;
+    Exit;
+  end;
+
+  // 🔹 Validação conforme o RadioButton selecionado
+  if repeticao_exercicicos.Checked then
+  begin
+    if Trim(Repeticao.Text) = '' then
+    begin
+      ShowMessage('Informe o número de repetições do exercício.');
+      Repeticao.SetFocus;
+      Exit;
+    end;
+  end
+  else if tempo_Exercicio.Checked then
+  begin
+    if Trim(TempoExercicio.Text) = '' then
+    begin
+      ShowMessage('Informe o tempo do exercício.');
+      TempoExercicio.SetFocus;
+      Exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
+procedure TCad_Exercicio.SalvarClick(Sender: TObject);
+var
+  Qry: TFDQuery;
+begin
+  // 🔹 Validação antes de salvar
+  if not ValidarCampos then
+    Exit;
+
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := DataModule1.FDConnection1;
+
+    if FIDAtual = 0 then
+    begin
+      Qry.SQL.Text :=
+        'INSERT INTO EXERCICIOS ' +
+        '(NOME_EXERCICIO, CALORIAS_QUEIMADAS, FREQUENCIA_EXERCICIO, ' +
+        'REPETICAO_EXERCICIO, SERIE_EXERCICIO, TEMPO_EXERCICIO) ' +
+        'VALUES (:NOME, :CAL, :FREQ, :REP, :SERIE, :TEMPO)';
+    end
+    else
+    begin
+      Qry.SQL.Text :=
+        'UPDATE EXERCICIOS SET ' +
+        'NOME_EXERCICIO = :NOME, CALORIAS_QUEIMADAS = :CAL, FREQUENCIA_EXERCICIO = :FREQ, ' +
+        'REPETICAO_EXERCICIO = :REP, SERIE_EXERCICIO = :SERIE, TEMPO_EXERCICIO = :TEMPO ' +
+        'WHERE ID_EXERCICIO = :ID';
+      Qry.ParamByName('ID').AsInteger := FIDAtual;
+    end;
+
+    Qry.ParamByName('NOME').AsString := Nome_Exerc.Text;
+    Qry.ParamByName('CAL').AsFloat := StrToFloatDef(Caloria.Text, 0);
+    Qry.ParamByName('FREQ').AsInteger := StrToIntDef(Frequencia.Text, 0);
+    Qry.ParamByName('REP').AsInteger := StrToIntDef(Repeticao.Text, 0);
+    Qry.ParamByName('SERIE').AsInteger := 1;
+    Qry.ParamByName('TEMPO').AsFloat := StrToFloatDef(TempoExercicio.Text, 0);
+
+    Qry.ExecSQL;
+
+    AtualizarGrid;
+    LimparCampos;
+
+    if FIDAtual = 0 then
+      ShowMessage('Exercício salvo com sucesso!')
+    else
+      ShowMessage('Exercício atualizado com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar: ' + E.Message);
+  end;
+
+  Qry.Free;
+end;
+
+procedure TCad_Exercicio.ExcluirClick(Sender: TObject);
+var
+  Qry: TFDQuery;
+  IDSelecionado: Integer;
+begin
+  if fdqryExercicios.IsEmpty then
+  begin
+    ShowMessage('Nenhum exercício selecionado para exclusão.');
+    Exit;
+  end;
+
+  IDSelecionado := fdqryExercicios.FieldByName('ID_EXERCICIO').AsInteger;
+
+  if MessageDlg('Deseja realmente excluir o exercício selecionado?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    Exit;
+
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := DataModule1.FDConnection1;
+    Qry.SQL.Text := 'DELETE FROM EXERCICIOS WHERE ID_EXERCICIO = :ID';
+    Qry.ParamByName('ID').AsInteger := IDSelecionado;
+    Qry.ExecSQL;
+
+    AtualizarGrid;
+    ShowMessage('Exercício excluído com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao excluir: ' + E.Message);
+  end;
+  Qry.Free;
+end;
+
+procedure TCad_Exercicio.CarregarCamposDoGrid;
+begin
+  if fdqryExercicios.IsEmpty then Exit;
+
+  FIDAtual := fdqryExercicios.FieldByName('ID_EXERCICIO').AsInteger;
+  Nome_Exerc.Text := fdqryExercicios.FieldByName('NOME_EXERCICIO').AsString;
+  Caloria.Text := fdqryExercicios.FieldByName('CALORIAS_QUEIMADAS').AsString;
+  Frequencia.Text := fdqryExercicios.FieldByName('FREQUENCIA_EXERCICIO').AsString;
+  Repeticao.Text := fdqryExercicios.FieldByName('REPETICAO_EXERCICIO').AsString;
+  TempoExercicio.Text := fdqryExercicios.FieldByName('TEMPO_EXERCICIO').AsString;
+
+  Salvar.Caption := 'Atualizar';
+end;
+
+procedure TCad_Exercicio.Grid_exercicioDblClick(Sender: TObject);
+begin
+  CarregarCamposDoGrid;
+end;
+
+procedure TCad_Exercicio.repeticao_exercicicosClick(Sender: TObject);
+begin
+  Repeticao.Enabled := True;
+  TempoExercicio.Enabled := False;
+  TempoExercicio.Clear;
+end;
+
+procedure TCad_Exercicio.tempo_ExercicioClick(Sender: TObject);
+begin
+  TempoExercicio.Enabled := True;
+  Repeticao.Enabled := False;
+  Repeticao.Clear;
+end;
+
+procedure TCad_Exercicio.AjustarColunas;
+var
+  i, MaxWidth, ColWidth: Integer;
+  Texto: string;
+begin
+  if not Assigned(Grid_exercicio.DataSource) or
+     not Assigned(Grid_exercicio.DataSource.DataSet) or
+     (Grid_exercicio.DataSource.DataSet.RecordCount = 0) then
+    Exit;
+
+  for i := 0 to Grid_exercicio.Columns.Count - 1 do
+  begin
+    if not Grid_exercicio.Columns[i].Visible then
+      Continue;
+
+    MaxWidth := Grid_exercicio.Canvas.TextWidth(Grid_exercicio.Columns[i].Title.Caption) + 20;
+    fdqryExercicios.DisableControls;
+    try
+      fdqryExercicios.First;
+      while not fdqryExercicios.Eof do
+      begin
+        Texto := fdqryExercicios.Fields[i].AsString;
+        ColWidth := Grid_exercicio.Canvas.TextWidth(Texto) + 20;
+        if ColWidth > MaxWidth then
+          MaxWidth := ColWidth;
+        fdqryExercicios.Next;
+      end;
+    finally
+      fdqryExercicios.EnableControls;
+    end;
+    Grid_exercicio.Columns[i].Width := MaxWidth;
+  end;
+end;
+
+end.
+

@@ -1,0 +1,844 @@
+﻿unit Cadastro_treino;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.DateUtils,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.DBCtrls,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Conexao, Dia_Semana, Vcl.ComCtrls, System.UITypes;
+
+type
+  TDMCadastro_Treino = class(TForm)
+
+    GridExercicio: TDBGrid;
+    fdqryTreino: TFDQuery;
+    dsTreino: TDataSource;
+    lblPessoa: TLabel;
+    edtNomePessoa: TEdit;
+    btnNovo: TButton;
+    btnSalvar: TButton;
+    btnExcluir: TButton;
+    btnCancelar: TButton;
+    btnPessoa: TSpeedButton;
+    dtpInicio: TDateTimePicker;
+    dtpFim: TDateTimePicker;
+    cbbFrequencia: TComboBox;
+    lblPeriodo: TLabel;
+    lblFrequencia: TLabel;
+    btnFiltrar: TButton;
+    Gerar_cronograma: TButton;
+    procedure btnExcluirClick(Sender: TObject);
+    procedure btnNovoClick(Sender: TObject);
+    procedure btnSalvarClick(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+    procedure btnFiltrarClick(Sender: TObject);
+    procedure Gerar_cronogramaClick(Sender: TObject);
+    procedure btnPessoaClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+  private
+    // === 🔹 Variáveis de estado e memória ===
+    FTempData: TDate;
+    DiasSelecionados: array of TDate;
+    DiaAtualIndex: Integer;
+
+    // === 🔹 Componentes dinâmicos do cronograma ===
+    pnlCronograma: TPanel;
+    lblTituloCrono: TLabel;
+    gridTreinoDia: TDBGrid;
+    btnAddExercicio: TButton;
+    btnSalvarAvancar: TButton;
+    dsDia: TDataSource;
+    mtDia: TFDMemTable;
+
+    // === 🔹 Métodos internos ===
+    procedure AtualizarTreinos(AFiltrarPorUsuario, AFiltrarPorDia: Boolean);
+    procedure LimparCampos;
+    procedure MontarDiasDoPeriodo;
+    procedure MostrarPainelCronograma(const AData: TDate);
+    procedure FecharPainelCronograma;
+    procedure AdicionarExercicioClick(Sender: TObject);
+    procedure SalvarAvancarClick(Sender: TObject);
+    procedure ExercicioSelectorDblClick(Sender: TObject);
+    procedure GridPessoaDblClick(Sender: TObject);
+    procedure InserirTreino(ADia: TDate; AIdExercicio: Integer);
+    procedure GridExercicioDrawColumnCell(Sender: TObject; const Rect: TRect;
+  DataCol: Integer; Column: TColumn; State: TGridDrawState);
+
+  public
+  end;
+
+
+var
+  DMCadastro_Treino: TDMCadastro_Treino;
+  IDUsuarioSelecionado: Integer = 0;
+  mtDiaGlobal: TFDMemTable = nil;
+
+implementation
+
+{$R *.dfm}
+
+uses
+  Vcl.Themes, Vcl.Styles;
+
+{ ============================================================================ }
+{ FORM SHOW }
+{ ============================================================================ }
+
+
+
+
+
+procedure TDMCadastro_Treino.btnCancelarClick(Sender: TObject);
+begin
+  // 🔹 Fecha painel de cronograma (se estiver aberto)
+  FecharPainelCronograma;
+
+  // 🔹 Limpa campos básicos
+  edtNomePessoa.Clear;
+  IDUsuarioSelecionado := 0;
+  dtpInicio.Date := Date;
+  dtpFim.Date := Date;
+  cbbFrequencia.ItemIndex := -1;
+
+  // 🔹 Limpa grid principal
+  fdqryTreino.Close;
+  fdqryTreino.SQL.Text := 'SELECT NULL AS DATA_TREINO, NULL AS NOME_EXERCICIO, NULL AS CALORIAS_QUEIMADAS WHERE 1=0;';
+  fdqryTreino.Open;
+  GridExercicio.DataSource := dsTreino;
+  dsTreino.DataSet := fdqryTreino;
+  GridExercicio.Columns.Clear;
+  GridExercicio.Refresh;
+
+  // 🔹 Mensagem final
+  ShowMessage('Todos os campos e treinos foram limpos.');
+end;
+
+
+procedure TDMCadastro_Treino.btnExcluirClick(Sender: TObject);
+var
+  Q: TFDQuery;
+  IdLista: Integer;
+begin
+  if IDUsuarioSelecionado = 0 then
+  begin
+    ShowMessage('Selecione um usuário antes de excluir.');
+    Exit;
+  end;
+
+  // CASO 1: Há uma linha selecionada → exclui apenas aquele exercício (pela PK)
+  if (not fdqryTreino.IsEmpty) and
+     (fdqryTreino.FindField('ID_LISTA') <> nil) and
+     (not fdqryTreino.FieldByName('ID_LISTA').IsNull) then
+  begin
+    IdLista := fdqryTreino.FieldByName('ID_LISTA').AsInteger;
+
+    if MessageDlg(
+         Format('Excluir o exercício "%s" do dia %s?',
+           [fdqryTreino.FieldByName('NOME_EXERCICIO').AsString,
+            FormatDateTime('dd/mm/yyyy', fdqryTreino.FieldByName('DATA_TREINO').AsDateTime)]),
+         mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+      Exit;
+
+    Q := TFDQuery.Create(nil);
+    try
+      Q.Connection := DataModule1.FDConnection1;
+      Q.SQL.Text := 'DELETE FROM LISTA_TREINO WHERE ID_LISTA = :ID';
+      Q.ParamByName('ID').AsInteger := IdLista;
+      Q.ExecSQL;
+      ShowMessage('Exercício excluído com sucesso.');
+    finally
+      Q.Free;
+    end;
+
+    AtualizarTreinos(True, False);
+    Exit;
+  end;
+
+  // CASO 2: Nenhuma linha selecionada → excluir TODOS do período filtrado
+  if (dtpInicio.Date > dtpFim.Date) then
+  begin
+    ShowMessage('Período inválido.');
+    Exit;
+  end;
+
+  if MessageDlg('Excluir todos os treinos do período para este usuário?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    Exit;
+
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := DataModule1.FDConnection1;
+    Q.SQL.Text :=
+      'DELETE FROM LISTA_TREINO ' +
+      ' WHERE ID_USUARIO = :U ' +
+      '   AND DATA_TREINO BETWEEN :DI AND :DF';
+    Q.ParamByName('U').AsInteger := IDUsuarioSelecionado;
+    Q.ParamByName('DI').AsDate   := dtpInicio.Date;
+    Q.ParamByName('DF').AsDate   := dtpFim.Date;
+    Q.ExecSQL;
+    ShowMessage('Todos os treinos do período foram excluídos.');
+  finally
+    Q.Free;
+  end;
+
+  AtualizarTreinos(True, False);
+end;
+
+procedure TDMCadastro_Treino.btnFiltrarClick(Sender: TObject);
+begin
+  if IDUsuarioSelecionado = 0 then
+  begin
+    ShowMessage('Selecione um usuário para aplicar o filtro.');
+    Exit;
+  end;
+  AtualizarTreinos(True, False);
+end;
+
+{ ============================================================================ }
+{ SALVAR (LEGADO: insere direto 1 exercício) – manter }
+{ ============================================================================ }
+
+
+{ ============================================================================ }
+{ EXCLUIR TREINOS DO PERÍODO }
+{ ============================================================================ }
+
+
+{ ============================================================================ }
+{ SELECIONAR PESSOA }
+{ ============================================================================ }
+
+
+procedure TDMCadastro_Treino.btnSalvarClick(Sender: TObject);
+begin
+  // Neste fluxo novo, o grande cadastro é via Gerar_cronograma.
+  // Mantive este botão por compatibilidade, mas ele apenas alerta.
+  ShowMessage('Use "Gerar Cronograma" para cadastrar exercícios por dia no período.');
+end;
+
+procedure TDMCadastro_Treino.Gerar_cronogramaClick(Sender: TObject);
+var
+  i: Integer;
+begin
+  if IDUsuarioSelecionado = 0 then
+  begin
+    ShowMessage('Selecione a pessoa antes de gerar o cronograma.');
+    Exit;
+  end;
+
+  if dtpInicio.Date > dtpFim.Date then
+  begin
+    ShowMessage('Período inválido.');
+    Exit;
+  end;
+
+  if (cbbFrequencia.ItemIndex < 0) or (cbbFrequencia.ItemIndex > 6) then
+  begin
+    ShowMessage('Selecione a frequência semanal (1 a 7x).');
+    Exit;
+  end;
+
+  MontarDiasDoPeriodo;
+
+  if Length(DiasSelecionados) = 0 then
+  begin
+    ShowMessage('Nenhuma data foi encontrada para a frequência/período informados.');
+    Exit;
+  end;
+
+  // 🔹 Nova lógica: só abrir uma vez por cada dia da semana envolvido
+  // (segunda, quarta, sexta etc.) sem repetir por semanas
+  // Criamos uma lista única com os dias da semana usados
+  SetLength(DiasSelecionados, 0);
+  case cbbFrequencia.ItemIndex + 1 of
+    1: SetLength(DiasSelecionados, 1);
+    2: SetLength(DiasSelecionados, 2);
+    3: SetLength(DiasSelecionados, 3);
+    4: SetLength(DiasSelecionados, 4);
+    5: SetLength(DiasSelecionados, 5);
+    6: SetLength(DiasSelecionados, 6);
+    7: SetLength(DiasSelecionados, 7);
+  end;
+
+  // Preenche com os dias da primeira semana do período
+  var DataBase := dtpInicio.Date;
+  var SemanaInicio := StartOfTheWeek(DataBase);
+  var j := 0;
+  for i := 1 to 7 do
+  begin
+    if j >= Length(DiasSelecionados) then Break;
+    // mesmo mapeamento usado em MontarDiasDoPeriodo
+    case cbbFrequencia.ItemIndex + 1 of
+      1: if i = 2 then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      2: if (i = 2) or (i = 5) then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      3: if (i in [2,4,6]) then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      4: if (i in [2,3,5,6]) then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      5: if (i in [2..6]) then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      6: if (i in [2..7]) then begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+      7: begin DiasSelecionados[j] := SemanaInicio + (i - 1); Inc(j); end;
+    end;
+  end;
+
+  DiaAtualIndex := 0;
+  MostrarPainelCronograma(DiasSelecionados[DiaAtualIndex]);
+end;
+
+procedure TDMCadastro_Treino.MontarDiasDoPeriodo;
+var
+  Data, DI, DF: TDate;
+  Dia: Integer;
+  UsarDia: array[1..7] of Boolean;
+
+  procedure ZeraDias;
+  var i: Integer;
+  begin
+    for i := Low(UsarDia) to High(UsarDia) do
+      UsarDia[i] := False;
+  end;
+
+begin
+  // Mapear dias conforme frequência
+  ZeraDias;
+  case cbbFrequencia.ItemIndex + 1 of
+    1: UsarDia[2] := True; // seg
+    2: begin UsarDia[2] := True; UsarDia[5] := True; end; // seg/qui
+    3: begin UsarDia[2] := True; UsarDia[4] := True; UsarDia[6] := True; end; // seg/qua/sex
+    4: begin UsarDia[2] := True; UsarDia[3] := True; UsarDia[5] := True; UsarDia[6] := True; end; // seg/ter/qui/sex
+    5: for Dia := 2 to 6 do UsarDia[Dia] := True; // seg..sex
+    6: for Dia := 2 to 7 do UsarDia[Dia] := True; // seg..sab
+    7: for Dia := 1 to 7 do UsarDia[Dia] := True; // dom..sab
+  end;
+
+  DI := dtpInicio.Date;
+  DF := dtpFim.Date;
+
+  SetLength(DiasSelecionados, 0);
+  Data := DI;
+  while Data <= DF do
+  begin
+    Dia := DayOfWeek(Data); // 1=Dom..7=Sáb
+    if UsarDia[Dia] then
+    begin
+      SetLength(DiasSelecionados, Length(DiasSelecionados) + 1);
+      DiasSelecionados[High(DiasSelecionados)] := Data;
+    end;
+    Data := IncDay(Data);
+  end;
+end;
+
+procedure TDMCadastro_Treino.GridPessoaDblClick(Sender: TObject);
+var
+  Grid: TDBGrid;
+  Q: TFDQuery;
+begin
+  Grid := Sender as TDBGrid;
+  Q := TFDQuery(Pointer(Grid.Tag));
+  if not Q.IsEmpty then
+  begin
+    edtNomePessoa.Text := Q.FieldByName('NOME').AsString;
+    IDUsuarioSelecionado := Q.FieldByName('ID_USUARIO').AsInteger;
+    AtualizarTreinos(True, False);
+    if Grid.Parent is TForm then
+      TForm(Grid.Parent).Close;
+  end;
+end;
+
+{ ============================================================================ }
+{ FILTRAR GRID PRINCIPAL }
+{ ============================================================================ }
+
+
+procedure TDMCadastro_Treino.btnNovoClick(Sender: TObject);
+begin
+  LimparCampos;
+  ShowMessage('Modo de novo cadastro habilitado.');
+end;
+
+procedure TDMCadastro_Treino.btnPessoaClick(Sender: TObject);
+var
+  Frm: TForm;
+  Grid: TDBGrid;
+  DS: TDataSource;
+  Q: TFDQuery;
+begin
+  Frm := TForm.Create(Self);
+  try
+    Frm.Caption := 'Usuários';
+    Frm.Width := 520;
+    Frm.Height := 360;
+    Frm.Position := poScreenCenter;
+    Frm.BorderStyle := bsDialog;
+
+    Q := TFDQuery.Create(Frm);
+    Q.Connection := DataModule1.FDConnection1;
+    Q.SQL.Text :=
+  'SELECT ID_USUARIO, ' +
+  '       CAST(NOME AS VARCHAR(100)) AS NOME ' +
+  '  FROM USUARIOS ' +
+  ' ORDER BY NOME';
+    Q.Open;
+
+    DS := TDataSource.Create(Frm);
+    DS.DataSet := Q;
+
+    Grid := TDBGrid.Create(Frm);
+    Grid.Parent := Frm;
+    Grid.Align := alClient;
+    Grid.DataSource := DS;
+    Grid.Options := Grid.Options + [dgTitles, dgRowSelect];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.Tag := NativeInt(Q);
+    Grid.OnDblClick := GridPessoaDblClick;
+
+    Frm.ShowModal;
+  finally
+    Frm.Free;
+  end;
+end;
+
+procedure TDMCadastro_Treino.AtualizarTreinos(AFiltrarPorUsuario, AFiltrarPorDia: Boolean);
+begin
+  if IDUsuarioSelecionado = 0 then
+  begin
+    fdqryTreino.Close;
+    fdqryTreino.SQL.Text := 'SELECT NULL AS ID_LISTA, NULL AS DATA_TREINO, NULL AS NOME_EXERCICIO, NULL AS CALORIAS_QUEIMADAS WHERE 1=0;';
+    fdqryTreino.Open;
+    Exit;
+  end;
+
+  fdqryTreino.Close;
+  // IMPORTANTE: agora trazemos ID_LISTA e ID_EXERCICIO para permitir exclusão precisa
+  fdqryTreino.SQL.Text :=
+    'SELECT L.ID_LISTA, ' +
+    '       L.ID_EXERCICIO, ' +
+    '       L.DATA_TREINO, ' +
+    '       CAST(E.NOME_EXERCICIO AS VARCHAR(200)) AS NOME_EXERCICIO, ' +
+    '       L.CALORIAS_QUEIMADAS ' +
+    '  FROM LISTA_TREINO L ' +
+    '  LEFT JOIN EXERCICIOS E ON E.ID_EXERCICIO = L.ID_EXERCICIO ' +
+    ' WHERE L.ID_USUARIO = :U ' +
+    '   AND L.DATA_TREINO BETWEEN :DI AND :DF ' +
+    ' ORDER BY L.DATA_TREINO, E.NOME_EXERCICIO';
+  fdqryTreino.ParamByName('U').AsInteger := IDUsuarioSelecionado;
+  fdqryTreino.ParamByName('DI').AsDate := dtpInicio.Date;
+  fdqryTreino.ParamByName('DF').AsDate := dtpFim.Date;
+  fdqryTreino.Open;
+
+  // Ajuste visual da grade (opcional — esconde IDs)
+  if GridExercicio.Columns.Count = 0 then
+    GridExercicio.Columns.RebuildColumns;
+
+  if fdqryTreino.FindField('ID_LISTA') <> nil then
+    GridExercicio.Columns[fdqryTreino.FieldByName('ID_LISTA').Index].Visible := False;
+  if fdqryTreino.FindField('ID_EXERCICIO') <> nil then
+    GridExercicio.Columns[fdqryTreino.FieldByName('ID_EXERCICIO').Index].Visible := False;
+
+  // Rótulos
+  if fdqryTreino.FindField('DATA_TREINO') <> nil then
+    fdqryTreino.FieldByName('DATA_TREINO').DisplayLabel := 'Data';
+  if fdqryTreino.FindField('NOME_EXERCICIO') <> nil then
+    fdqryTreino.FieldByName('NOME_EXERCICIO').DisplayLabel := 'Exercício';
+  if fdqryTreino.FindField('CALORIAS_QUEIMADAS') <> nil then
+    fdqryTreino.FieldByName('CALORIAS_QUEIMADAS').DisplayLabel := 'Calorias';
+end;
+
+{ ============================================================================ }
+{ GERAR CRONOGRAMA – fluxo dinâmico dentro da própria unit }
+{ ============================================================================ }
+
+
+procedure TDMCadastro_Treino.MostrarPainelCronograma(const AData: TDate);
+const
+  DiasPt: array[1..7] of string =
+    ('Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado');
+var
+  idxDia: Integer;
+begin
+  // cria painel e controles apenas uma vez; depois só atualiza
+  if pnlCronograma = nil then
+  begin
+    pnlCronograma := TPanel.Create(Self);
+    pnlCronograma.Parent := Self;
+    pnlCronograma.Align := alClient;
+    pnlCronograma.BevelOuter := bvNone;
+    pnlCronograma.Color := RGB(245,248,250);
+
+    lblTituloCrono := TLabel.Create(pnlCronograma);
+    lblTituloCrono.Parent := pnlCronograma;
+    lblTituloCrono.Left := 16;
+    lblTituloCrono.Top := 12;
+    lblTituloCrono.Font.Size := 12;
+    lblTituloCrono.Font.Style := [fsBold];
+
+    btnAddExercicio := TButton.Create(pnlCronograma);
+    btnAddExercicio.Parent := pnlCronograma;
+    btnAddExercicio.Left := 16;
+    btnAddExercicio.Top := 42;
+    btnAddExercicio.Width := 180;
+    btnAddExercicio.Caption := '+ Adicionar Exercício';
+    btnAddExercicio.OnClick := AdicionarExercicioClick;
+
+    btnSalvarAvancar := TButton.Create(pnlCronograma);
+    btnSalvarAvancar.Parent := pnlCronograma;
+    btnSalvarAvancar.Left := btnAddExercicio.Left + btnAddExercicio.Width + 10;
+    btnSalvarAvancar.Top := 42;
+    btnSalvarAvancar.Width := 180;
+    btnSalvarAvancar.Caption := 'Salvar e Avançar';
+    btnSalvarAvancar.OnClick := SalvarAvancarClick;
+
+    gridTreinoDia := TDBGrid.Create(pnlCronograma);
+    gridTreinoDia.Parent := pnlCronograma;
+    gridTreinoDia.Left := 16;
+    gridTreinoDia.Top := 80;
+    gridTreinoDia.Align := alBottom;
+    gridTreinoDia.Height := pnlCronograma.ClientHeight - 80;
+    gridTreinoDia.Options := gridTreinoDia.Options + [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    gridTreinoDia.TitleFont.Style := [fsBold];
+
+mtDia := TFDMemTable.Create(pnlCronograma);
+mtDia.FieldDefs.Add('ID_EXERCICIO', ftInteger);
+mtDia.FieldDefs.Add('EXERCICIO', ftString, 200);
+mtDia.FieldDefs.Add('CALORIAS', ftFloat);
+mtDia.FieldDefs.Add('QUANTIDADE', ftInteger);
+mtDia.FieldDefs.Add('FREQUENCIA', ftInteger);
+mtDia.CreateDataSet;
+
+
+dsDia := TDataSource.Create(pnlCronograma);
+dsDia.DataSet := mtDia;
+mtDiaGlobal := mtDia;
+
+// 🔹 Vincula o DataSource ao grid (era o que faltava)
+gridTreinoDia.DataSource := dsDia;
+
+gridTreinoDia.Columns.Clear;
+gridTreinoDia.Columns.Add.FieldName := 'EXERCICIO';
+gridTreinoDia.Columns[0].Title.Caption := 'Exercício';
+gridTreinoDia.Columns[0].Width := 250;
+
+gridTreinoDia.Columns.Add.FieldName := 'CALORIAS';
+gridTreinoDia.Columns[1].Title.Caption := 'Calorias';
+gridTreinoDia.Columns[1].Width := 100;
+
+gridTreinoDia.Columns.Add.FieldName := 'QUANTIDADE';
+gridTreinoDia.Columns[2].Title.Caption := 'Qtd.';
+gridTreinoDia.Columns[2].Width := 80;
+
+gridTreinoDia.Columns.Add.FieldName := 'FREQUENCIA';
+gridTreinoDia.Columns[3].Title.Caption := 'Freq.';
+gridTreinoDia.Columns[3].Width := 80;
+
+  end
+  else
+  begin
+    mtDia.DisableControls;
+    try
+      mtDia.EmptyDataSet;
+    finally
+      mtDia.EnableControls;
+    end;
+  end;
+
+  idxDia := DayOfWeek(AData); // 1..7
+  lblTituloCrono.Caption := Format('%s — %s',
+    [DiasPt[idxDia], FormatDateTime('dd/mm/yyyy', AData)]);
+end;
+
+procedure TDMCadastro_Treino.FecharPainelCronograma;
+begin
+  if pnlCronograma <> nil then
+  begin
+    pnlCronograma.Free;
+    pnlCronograma := nil;
+    lblTituloCrono := nil;
+    gridTreinoDia := nil;
+    btnAddExercicio := nil;
+    btnSalvarAvancar := nil;
+    dsDia := nil;
+    mtDia := nil;
+  end;
+end;
+
+procedure TDMCadastro_Treino.FormShow(Sender: TObject);
+begin
+  fdqryTreino.Connection := DataModule1.FDConnection1;
+
+  // grid principal vazio
+  fdqryTreino.Close;
+  fdqryTreino.SQL.Text := 'SELECT NULL AS DATA_TREINO, NULL AS NOME_EXERCICIO WHERE 1=0;';
+  fdqryTreino.Open;
+
+  dsTreino.DataSet := fdqryTreino;
+  GridExercicio.DataSource := dsTreino;
+
+  // frequência 1..7
+  cbbFrequencia.Items.Clear;
+  cbbFrequencia.Items.Add('1x por semana');
+  cbbFrequencia.Items.Add('2x por semana');
+  cbbFrequencia.Items.Add('3x por semana');
+  cbbFrequencia.Items.Add('4x por semana');
+  cbbFrequencia.Items.Add('5x por semana');
+  cbbFrequencia.Items.Add('6x por semana');
+  cbbFrequencia.Items.Add('7x por semana');
+  cbbFrequencia.ItemIndex := 2;
+
+  btnFiltrar.Caption := 'Filtrar';
+  Gerar_cronograma.Caption := 'Gerar Cronograma';
+end;
+
+{ ============================================================================ }
+{ AUXILIARES PADRÃO }
+{ ============================================================================ }
+procedure TDMCadastro_Treino.LimparCampos;
+begin
+  edtNomePessoa.Clear;
+  IDUsuarioSelecionado := 0;
+end;
+
+
+{ ============================================================================ }
+{ ADICIONAR EXERCÍCIO AO DIA (abre seletor, duplo clique adiciona na mtDia) }
+{ ============================================================================ }
+procedure TDMCadastro_Treino.AdicionarExercicioClick(Sender: TObject);
+var
+  Frm: TForm;
+  Grid: TDBGrid;
+  DS: TDataSource;
+  Q: TFDQuery;
+
+  procedure GridCellClick(Sender: TObject; Column: TColumn);
+  begin
+    // Impede entrar em modo de edição ao clicar
+    (Sender as TDBGrid).EditorMode := False;
+  end;
+
+begin
+  Frm := TForm.Create(Self);
+  try
+    Frm.Caption := 'Selecione Exercícios';
+    Frm.Width := 720;
+    Frm.Height := 440;
+    Frm.Position := poScreenCenter;
+    Frm.BorderStyle := bsDialog;
+
+    Q := TFDQuery.Create(Frm);
+    Q.Connection := DataModule1.FDConnection1;
+    Q.SQL.Text :=
+      'SELECT ID_EXERCICIO, ' +
+      '       CAST(NOME_EXERCICIO AS VARCHAR(200)) AS NOME_EXERCICIO, ' +
+      '       CALORIAS_QUEIMADAS, ' +
+      '       1 AS QUANTIDADE, ' +
+      '       1 AS FREQUENCIA ' +
+      '  FROM EXERCICIOS ' +
+      ' ORDER BY NOME_EXERCICIO';
+    Q.Open;
+
+    DS := TDataSource.Create(Frm);
+    DS.DataSet := Q;
+
+    Grid := TDBGrid.Create(Frm);
+    Grid.Parent := Frm;
+    Grid.Align := alClient;
+    Grid.DataSource := DS;
+    Grid.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.OnDblClick := ExercicioSelectorDblClick;
+    Grid.Tag := NativeInt(Q);
+
+    Frm.ShowModal;
+  finally
+    Frm.Free;
+  end;
+end;
+
+procedure TDMCadastro_Treino.ExercicioSelectorDblClick(Sender: TObject);
+var
+  Grid: TDBGrid;
+  Q: TFDQuery;
+begin
+  if mtDiaGlobal = nil then
+  begin
+    ShowMessage('Nenhum cronograma ativo para adicionar o exercício.');
+    Exit;
+  end;
+
+  Grid := Sender as TDBGrid;
+  Q := TFDQuery(Pointer(Grid.Tag));
+
+  if (Q <> nil) and (not Q.IsEmpty) then
+  begin
+    mtDiaGlobal.Append;
+    mtDiaGlobal.FieldByName('ID_EXERCICIO').AsInteger := Q.FieldByName('ID_EXERCICIO').AsInteger;
+    mtDiaGlobal.FieldByName('EXERCICIO').AsString := Q.FieldByName('NOME_EXERCICIO').AsString;
+    mtDiaGlobal.FieldByName('CALORIAS').AsFloat := Q.FieldByName('CALORIAS_QUEIMADAS').AsFloat;
+    mtDiaGlobal.FieldByName('QUANTIDADE').AsInteger := Q.FieldByName('QUANTIDADE').AsInteger;
+    mtDiaGlobal.FieldByName('FREQUENCIA').AsInteger := Q.FieldByName('FREQUENCIA').AsInteger;
+    mtDiaGlobal.Post;
+
+    // feedback visual
+    Beep;
+    ShowMessage('Exercício adicionado ao cronograma.');
+  end;
+
+  // Fecha o popup após adicionar
+  if Grid.Parent is TForm then
+    TForm(Grid.Parent).Close;
+end;
+
+
+{ ============================================================================ }
+{ SALVAR DO DIA ATUAL E AVANÇAR }
+{ ============================================================================ }
+procedure TDMCadastro_Treino.SalvarAvancarClick(Sender: TObject);
+var
+  DataReferencia, DataIter: TDate;
+  DiasDaSemana: array of Integer;
+  i, j, Semanas, TotalTreinos, ExerciciosPorDia: Integer;
+  MsgResumo: string;
+begin
+  if (Length(DiasSelecionados) = 0) or (DiaAtualIndex < 0) or (DiaAtualIndex >= Length(DiasSelecionados)) then
+    Exit;
+
+  DataReferencia := DiasSelecionados[DiaAtualIndex];
+
+  // Coleta os dias da semana base (ex: segunda, quarta, sexta)
+  SetLength(DiasDaSemana, Length(DiasSelecionados));
+  for i := 0 to High(DiasSelecionados) do
+    DiasDaSemana[i] := DayOfWeek(DiasSelecionados[i]);
+
+  // Persiste o treino do dia atual
+  mtDia.First;
+  while not mtDia.Eof do
+  begin
+    InserirTreino(DataReferencia, mtDia.FieldByName('ID_EXERCICIO').AsInteger);
+    mtDia.Next;
+  end;
+
+  // Próximo dia base da semana
+  Inc(DiaAtualIndex);
+
+  if DiaAtualIndex <= High(DiasSelecionados) then
+  begin
+    MostrarPainelCronograma(DiasSelecionados[DiaAtualIndex]);
+  end
+  else
+  begin
+    // === ⚙️ Cálculo da replicação ===
+    Semanas := WeeksBetween(dtpInicio.Date, dtpFim.Date) + 1;
+    ExerciciosPorDia := mtDia.RecordCount;
+    TotalTreinos := Semanas * Length(DiasSelecionados) * ExerciciosPorDia;
+
+    MsgResumo :=
+      Format('📅 Período selecionado: %s até %s' + sLineBreak +
+             '🗓 Total de semanas: %d' + sLineBreak +
+             '💪 Dias de treino por semana: %d' + sLineBreak +
+             '🏋️‍♂️ Exercícios por dia: %d' + sLineBreak +
+             '🔁 Serão gerados aproximadamente %d treinos no total.' + sLineBreak +
+             sLineBreak + 'Deseja continuar?',
+             [FormatDateTime('dd/mm/yyyy', dtpInicio.Date),
+              FormatDateTime('dd/mm/yyyy', dtpFim.Date),
+              Semanas, Length(DiasSelecionados), ExerciciosPorDia, TotalTreinos]);
+
+    if MessageDlg(MsgResumo, mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    begin
+      FecharPainelCronograma;
+      ShowMessage('Operação cancelada pelo usuário.');
+      Exit;
+    end;
+
+    // === 🔁 Replicação automática das semanas ===
+    for j := 1 to Semanas - 1 do
+    begin
+      for i := 0 to High(DiasSelecionados) do
+      begin
+        DataIter := DiasSelecionados[i] + (7 * j);
+        if (DataIter >= dtpInicio.Date) and (DataIter <= dtpFim.Date) then
+        begin
+          mtDia.First;
+          while not mtDia.Eof do
+          begin
+            InserirTreino(DataIter, mtDia.FieldByName('ID_EXERCICIO').AsInteger);
+            mtDia.Next;
+          end;
+        end;
+      end;
+    end;
+
+    // === ✅ Finalização ===
+    FecharPainelCronograma;
+    ShowMessage(Format('Cronograma salvo com sucesso!' + sLineBreak +
+                       'Foram gerados %d treinos em %d semanas.',
+                       [TotalTreinos, Semanas]));
+    AtualizarTreinos(True, False);
+  end;
+end;
+
+{ ============================================================================ }
+{ INSERIR TREINO NA LISTA_TREINO }
+{ ============================================================================ }
+procedure TDMCadastro_Treino.InserirTreino(ADia: TDate; AIdExercicio: Integer);
+var
+  Q: TFDQuery;
+  IDDia: Integer;
+begin
+  // 1=Dom..7=Sáb
+  IDDia := DayOfWeek(ADia);
+
+  Q := TFDQuery.Create(nil);
+  try
+    Q.Connection := DataModule1.FDConnection1;
+    // IMPORTANTE: requer DATA_TREINO, DATA_INICIO e DATA_FIM em LISTA_TREINO
+    Q.SQL.Text :=
+      'INSERT INTO LISTA_TREINO '+
+      '  (ID_USUARIO, ID_DIA, ID_EXERCICIO, NOME_EXERCICIO, CALORIAS_QUEIMADAS, DATA_TREINO, DATA_INICIO, DATA_FIM) '+
+      'SELECT :U, :D, E.ID_EXERCICIO, E.NOME_EXERCICIO, E.CALORIAS_QUEIMADAS, :DTREINO, :DINICIO, :DFIM '+
+      '  FROM EXERCICIOS E '+
+      ' WHERE E.ID_EXERCICIO = :EID';
+    Q.ParamByName('U').AsInteger      := IDUsuarioSelecionado;
+    Q.ParamByName('D').AsInteger      := IDDia;
+    Q.ParamByName('EID').AsInteger    := AIdExercicio;
+    Q.ParamByName('DTREINO').AsDate   := ADia;
+    Q.ParamByName('DINICIO').AsDate   := dtpInicio.Date;
+    Q.ParamByName('DFIM').AsDate      := dtpFim.Date;
+    Q.ExecSQL;
+  finally
+    Q.Free;
+  end;
+end;
+
+procedure TDMCadastro_Treino.GridExercicioDrawColumnCell(Sender: TObject;
+  const Rect: TRect; DataCol: Integer; Column: TColumn;
+  State: TGridDrawState);
+const
+  DiasSemana: array[1..7] of string =
+    ('Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+     'Quinta-feira', 'Sexta-feira', 'Sábado');
+var
+  DataSet: TDataSet;
+  Data: TDate;
+  Dia: Integer;
+  Texto: string;
+begin
+  DataSet := (Sender as TDBGrid).DataSource.DataSet;
+  if (DataSet = nil) or (DataSet.IsEmpty) then
+    Exit;
+
+  // Se for a coluna da data, desenha o nome do dia da semana
+  if Column.FieldName = 'DATA_TREINO' then
+  begin
+    Data := DataSet.FieldByName('DATA_TREINO').AsDateTime;
+    Dia := DayOfWeek(Data);
+    Texto := DiasSemana[Dia];
+    (Sender as TDBGrid).Canvas.FillRect(Rect);
+    (Sender as TDBGrid).Canvas.TextOut(Rect.Left + 4, Rect.Top + 2, Texto);
+  end
+  else
+    (Sender as TDBGrid).DefaultDrawColumnCell(Rect, DataCol, Column, State);
+end;
+
+
+end.
+

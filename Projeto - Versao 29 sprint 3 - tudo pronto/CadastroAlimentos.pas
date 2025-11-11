@@ -1,0 +1,317 @@
+﻿unit CadastroAlimentos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
+  Vcl.StdCtrls,
+  Vcl.Mask, Vcl.DBCtrls, Data.DB, FireDAC.Comp.Client, FireDAC.Comp.DataSet,
+  Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, Conexao;
+
+type
+  TCadastro_Alimentos = class(TForm)
+    Alimentos: TPanel;
+    Nome_Alimento: TLabel;
+    Peso_Alimento_gramas: TLabel;
+    Calorias_Alimentos: TLabel;
+    Alimento: TEdit;
+    Peso: TEdit;
+    Calorias: TEdit;
+    Salvar: TButton;
+    Excluir: TButton;
+    DBGrid1: TDBGrid;
+    FDQuery1: TFDQuery;
+    DataSource1: TDataSource;
+    btnNovo: TButton;
+    btnCancelar: TButton;
+    procedure FormShow(Sender: TObject);
+    procedure DBGrid1DblClick(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+    procedure PesoKeyPress(Sender: TObject; var Key: Char);
+    procedure CaloriasKeyPress(Sender: TObject; var Key: Char);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure btnNovoClick(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+  private
+    FIDAtual: Integer;
+    procedure CarregarCampos;
+    procedure AjustarColunas;
+    procedure LimparCampos;
+    function CamposPreenchidos: Boolean;
+  public
+  end;
+
+var
+  Cadastro_Alimentos: TCadastro_Alimentos;
+
+implementation
+
+{$R *.dfm}
+
+procedure TCadastro_Alimentos.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TCadastro_Alimentos.FormShow(Sender: TObject);
+begin
+  FDQuery1.Close;
+  FDQuery1.Connection := DataModule1.FDConnection1;
+
+  FDQuery1.SQL.Text :=
+    'SELECT ID_ALIMENTO, NOME_ALIMENTO, CALORIA_ALIMENTO, PESO_ALIMENTO_G FROM CADASTRO_ALIMENTOS';
+  FDQuery1.Open;
+
+  DataSource1.DataSet := FDQuery1;
+  DBGrid1.DataSource := DataSource1;
+  if DBGrid1.Columns.Count > 0 then
+  begin
+    DBGrid1.Columns[0].Visible := False;
+    DBGrid1.Columns[1].Title.Caption := 'Nome Alimento';
+    DBGrid1.Columns[2].Title.Caption := 'Caloria Alimento';
+    DBGrid1.Columns[3].Title.Caption := 'Peso Alimento (g)';
+  end;
+
+  FIDAtual := 0;
+  Salvar.Caption := 'Salvar';
+  AjustarColunas;
+end;
+
+procedure TCadastro_Alimentos.PesoKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not (Key in ['0'..'9', ',', #8]) then
+    Key := #0;
+  if (Key = ',') and (Pos(',', (Sender as TEdit).Text) > 0) then
+    Key := #0;
+end;
+
+procedure TCadastro_Alimentos.CaloriasKeyPress(Sender: TObject; var Key: Char);
+begin
+  if not (Key in ['0'..'9', ',', #8]) then
+    Key := #0;
+  if (Key = ',') and (Pos(',', (Sender as TEdit).Text) > 0) then
+    Key := #0;
+end;
+
+procedure TCadastro_Alimentos.CarregarCampos;
+begin
+  if FDQuery1.IsEmpty then Exit;
+
+  FIDAtual := FDQuery1.Fields[0].AsInteger; // ID_ALIMENTO
+  Alimento.Text := FDQuery1.Fields[1].AsString; // NOME_ALIMENTO
+  Calorias.Text := FDQuery1.Fields[2].AsString; // CALORIA_ALIMENTO
+  Peso.Text := FDQuery1.Fields[3].AsString;     // PESO_ALIMENTO_G
+
+  Salvar.Caption := 'Atualizar';
+end;
+
+procedure TCadastro_Alimentos.DBGrid1DblClick(Sender: TObject);
+begin
+  CarregarCampos;
+end;
+
+procedure TCadastro_Alimentos.SalvarClick(Sender: TObject);
+begin
+  if (Trim(Alimento.Text) = '') or (Trim(Calorias.Text) = '') or
+     (Trim(Peso.Text) = '') then
+  begin
+    ShowMessage('Preencha todos os campos!');
+    Exit;
+  end;
+
+  try
+    if FIDAtual = 0 then
+    begin
+      FDQuery1.SQL.Text :=
+        'INSERT INTO CADASTRO_ALIMENTOS (NOME_ALIMENTO, CALORIA_ALIMENTO, PESO_ALIMENTO_G) ' +
+        'VALUES (:NOME, :CALORIA, :PESO)';
+      FDQuery1.ParamByName('NOME').AsString := Alimento.Text;
+      FDQuery1.ParamByName('CALORIA').AsFloat := StrToFloatDef(Calorias.Text, 0);
+      FDQuery1.ParamByName('PESO').AsFloat := StrToFloatDef(Peso.Text, 0);
+      FDQuery1.ExecSQL;
+      ShowMessage('Registro inserido com sucesso!');
+    end
+    else
+    begin
+      FDQuery1.SQL.Text :=
+        'UPDATE CADASTRO_ALIMENTOS SET NOME_ALIMENTO = :NOME, CALORIA_ALIMENTO = :CALORIA, ' +
+        'PESO_ALIMENTO_G = :PESO WHERE ID_ALIMENTO = :ID';
+      FDQuery1.ParamByName('NOME').AsString := Alimento.Text;
+      FDQuery1.ParamByName('CALORIA').AsFloat := StrToFloatDef(Calorias.Text, 0);
+      FDQuery1.ParamByName('PESO').AsFloat := StrToFloatDef(Peso.Text, 0);
+      FDQuery1.ParamByName('ID').AsInteger := FIDAtual;
+      FDQuery1.ExecSQL;
+      ShowMessage('Registro atualizado com sucesso!');
+    end;
+
+    FDQuery1.SQL.Text :=
+      'SELECT ID_ALIMENTO, NOME_ALIMENTO, CALORIA_ALIMENTO, PESO_ALIMENTO_G FROM CADASTRO_ALIMENTOS';
+    FDQuery1.Open;
+
+    LimparCampos;
+    Alimento.SetFocus;
+    AjustarColunas;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Alimentos.ExcluirClick(Sender: TObject);
+var
+  IDParaExcluir: Integer;
+  NomeAlimento: string;
+  QryVerifica: TFDQuery;
+  TotalRefs, TotHist, TotJunc: Integer;
+begin
+  if FDQuery1.IsEmpty then
+  begin
+    ShowMessage('Nenhum registro selecionado!');
+    Exit;
+  end;
+
+  // ID e nome a partir do grid/consulta atual
+  if FIDAtual <> 0 then
+    IDParaExcluir := FIDAtual
+  else
+    IDParaExcluir := FDQuery1.Fields[0].AsInteger;   // ID_ALIMENTO
+
+  NomeAlimento := FDQuery1.Fields[1].AsString;       // NOME_ALIMENTO
+
+  // --- Verificação de vínculos reais (HISTORICO_CALORIAS e JUNCAO_ALIMENTO)
+  QryVerifica := TFDQuery.Create(nil);
+  try
+    QryVerifica.Connection := DataModule1.FDConnection1;
+
+    // HISTORICO_CALORIAS
+    QryVerifica.SQL.Text :=
+      'SELECT COUNT(*) AS TOTAL FROM HISTORICO_CALORIAS WHERE ID_ALIMENTO = :ID';
+    QryVerifica.ParamByName('ID').AsInteger := IDParaExcluir;
+    QryVerifica.Open;
+    TotHist := QryVerifica.FieldByName('TOTAL').AsInteger;
+    QryVerifica.Close;
+
+    // JUNCAO_ALIMENTO
+    QryVerifica.SQL.Text :=
+      'SELECT COUNT(*) AS TOTAL FROM JUNCAO_ALIMENTO WHERE ID_ALIMENTO = :ID';
+    QryVerifica.ParamByName('ID').AsInteger := IDParaExcluir;
+    QryVerifica.Open;
+    TotJunc := QryVerifica.FieldByName('TOTAL').AsInteger;
+    QryVerifica.Close;
+
+    TotalRefs := TotHist + TotJunc;
+
+    if TotalRefs > 0 then
+    begin
+      ShowMessage(
+        '⚠️ Não é possível excluir: existem vínculos com este alimento.' + sLineBreak +
+        '• HISTORICO_CALORIAS: ' + TotHist.ToString + sLineBreak +
+        '• JUNCAO_ALIMENTO: '   + TotJunc.ToString
+      );
+      Exit;
+    end;
+  finally
+    QryVerifica.Free;
+  end;
+
+  // Confirma exclusão
+  if MessageDlg('Deseja realmente excluir o alimento "' + NomeAlimento + '"?',
+    mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    Exit;
+
+  // Executa a exclusão
+  try
+    FDQuery1.Close;
+    FDQuery1.SQL.Text :=
+      'DELETE FROM CADASTRO_ALIMENTOS WHERE ID_ALIMENTO = :ID';
+    FDQuery1.ParamByName('ID').AsInteger := IDParaExcluir;
+    FDQuery1.ExecSQL;
+
+    // Recarrega a lista
+    FDQuery1.SQL.Text :=
+      'SELECT ID_ALIMENTO, NOME_ALIMENTO, CALORIA_ALIMENTO, PESO_ALIMENTO_G FROM CADASTRO_ALIMENTOS';
+    FDQuery1.Open;
+
+    LimparCampos;
+    AjustarColunas;
+    ShowMessage('Registro excluído com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao excluir: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Alimentos.AjustarColunas;
+var
+  i, MaxWidth, ColWidth: Integer;
+  Texto: string;
+begin
+  for i := 0 to DBGrid1.Columns.Count - 1 do
+  begin
+    MaxWidth := DBGrid1.Canvas.TextWidth(DBGrid1.Columns[i].Title.Caption) + 20;
+    FDQuery1.DisableControls;
+    try
+      FDQuery1.First;
+      while not FDQuery1.Eof do
+      begin
+        Texto := FDQuery1.Fields[i].AsString;
+        ColWidth := DBGrid1.Canvas.TextWidth(Texto) + 20;
+        if ColWidth > MaxWidth then
+          MaxWidth := ColWidth;
+        FDQuery1.Next;
+      end;
+    finally
+      FDQuery1.EnableControls;
+    end;
+    DBGrid1.Columns[i].Width := MaxWidth;
+  end;
+end;
+
+{ ---------- NOVO E CANCELAR ---------- }
+
+procedure TCadastro_Alimentos.LimparCampos;
+begin
+  Alimento.Clear;
+  Calorias.Clear;
+  Peso.Clear;
+  FIDAtual := 0;
+  Salvar.Caption := 'Salvar';
+end;
+
+function TCadastro_Alimentos.CamposPreenchidos: Boolean;
+begin
+  Result :=
+    (Trim(Alimento.Text) <> '') or
+    (Trim(Calorias.Text) <> '') or
+    (Trim(Peso.Text) <> '');
+end;
+
+procedure TCadastro_Alimentos.btnNovoClick(Sender: TObject);
+begin
+  LimparCampos;
+  ShowMessage('Pronto para inserir um novo alimento.');
+  Alimento.SetFocus;
+end;
+
+procedure TCadastro_Alimentos.btnCancelarClick(Sender: TObject);
+begin
+  if CamposPreenchidos then
+  begin
+    if MessageDlg('Deseja realmente cancelar a operação atual?',
+      mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+      Exit;
+  end;
+  LimparCampos;
+  ShowMessage('Operação cancelada.');
+end;
+
+end.
+

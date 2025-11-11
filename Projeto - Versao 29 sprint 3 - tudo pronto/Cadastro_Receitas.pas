@@ -1,0 +1,751 @@
+﻿unit Cadastro_Receitas;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.Buttons, Vcl.StdCtrls,
+  Data.DB, Vcl.Grids, Vcl.DBGrids, Vcl.DBCtrls,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Stan.Async, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Refeicao_Cadastro, Data.Win.ADODB, Vcl.Mask, Dia_Semana, CadastroAlimentos,
+  System.UITypes;
+
+type
+  TCadastro_Receita = class(TForm)
+    NomePessoa: TLabel;
+    lista_alimento: TDBGrid;
+    Salvar: TButton;
+    Excluir: TButton;
+    Refeicao: TLabel;
+    DiadaSemana: TLabel;
+    btn1: TSpeedButton;
+    DataSource1: TDataSource;
+    FDQuery1: TFDQuery;
+    SpeedButton1: TSpeedButton;
+    SpeedButton2: TSpeedButton;
+    Alimentos: TLabel;
+    SpeedButton4: TSpeedButton;
+    Nome: TEdit;
+    DBEdit2: TEdit;
+    DBEdit3: TEdit;
+    DBEdit4: TEdit;
+    LabelResumo: TLabel;
+    btnNovo: TButton;
+    btnCancelar: TButton;
+    btnExcluirCardapio: TButton;
+    btnReplicar: TButton;
+    procedure btn1Click(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
+    procedure SpeedButton2Click(Sender: TObject);
+    procedure SpeedButton4Click(Sender: TObject);
+    procedure SalvarClick(Sender: TObject);
+    procedure ExcluirClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure btnNovoClick(Sender: TObject);
+    procedure btnCancelarClick(Sender: TObject);
+    procedure btnExcluirCardapioClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure btnReplicarClick(Sender: TObject);
+  private
+    procedure GridDblClick(Sender: TObject);
+    procedure CarregarCardapio;
+    procedure AtualizarCardapio;
+    procedure AtualizarRotuloResumo;
+    procedure ReplicarConfirmarClick(Sender: TObject);
+    procedure ReplicarCancelarClick(Sender: TObject);
+  public
+  end;
+
+var
+  Cadastro_Receita: TCadastro_Receita;
+  IDUsuarioSelecionado: Integer = 0;
+  IDRefeicaoSelecionada: Integer = 0;
+  IDDiaSelecionado: Integer = 0;
+  IDAlimentoSelecionado: Integer = 0;
+
+implementation
+
+{$R *.dfm}
+
+uses Conexao;
+
+procedure TCadastro_Receita.btn1Click(Sender: TObject);
+var
+  FormGrid: TForm;
+  Grid: TDBGrid;
+  DSGrid: TDataSource;
+  QryGrid: TFDQuery;
+begin
+  FormGrid := TForm.Create(Self);
+  try
+    FormGrid.Caption := 'Usuários Cadastrados';
+    FormGrid.Width := 500;
+    FormGrid.Height := 300;
+    FormGrid.Position := poScreenCenter;
+    FormGrid.BorderStyle := bsDialog;
+    FormGrid.Color := clBtnFace;
+
+    QryGrid := TFDQuery.Create(FormGrid);
+    QryGrid.Connection := DataModule1.FDConnection1;
+    QryGrid.SQL.Text :=
+     'SELECT ID_USUARIO, ' +
+     'CAST(NOME AS VARCHAR(100)) AS NOME, ' +
+     'CASE ' +
+     '  WHEN LENGTH(CPF) = 11 THEN ' +
+     '    SUBSTR(CPF, 1, 3) || ''.'' || SUBSTR(CPF, 4, 3) || ''.'' || SUBSTR(CPF, 7, 3) || ''-'' || SUBSTR(CPF, 10, 2) ' +
+     '  ELSE CPF ' +
+     'END AS CPF ' +
+     'FROM USUARIOS ' +
+     'ORDER BY NOME;';
+    QryGrid.Open;
+
+    DSGrid := TDataSource.Create(FormGrid);
+    DSGrid.DataSet := QryGrid;
+
+    Grid := TDBGrid.Create(FormGrid);
+    Grid.Parent := FormGrid;
+    Grid.Align := alClient;
+    Grid.DataSource := DSGrid;
+    Grid.ReadOnly := True;
+    Grid.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.Font.Size := 10;
+
+    Grid.Columns[0].Title.Caption := 'ID';
+    Grid.Columns[1].Title.Caption := 'Nome';
+    Grid.Columns[2].Title.Caption := 'CPF';
+    Grid.Columns[0].Width := 50;
+    Grid.Columns[1].Width := 300;
+    Grid.Columns[2].Width := 120;
+
+    Grid.Tag := NativeInt(QryGrid);
+    Grid.OnDblClick := GridDblClick;
+
+    FormGrid.ShowModal;
+  finally
+    FormGrid.Free;
+  end;
+end;
+
+procedure TCadastro_Receita.SpeedButton1Click(Sender: TObject);
+begin
+  try
+    Refecicao_Cadastro := TRefecicao_Cadastro.Create(Self);
+    try
+      if Refecicao_Cadastro.ShowModal = mrOk then
+      begin
+        if not Refecicao_Cadastro.QryRefeicao.IsEmpty then
+        begin
+          DBEdit2.Text := Refecicao_Cadastro.QryRefeicao.FieldByName('NOME_REFEICAO').AsString;
+          IDRefeicaoSelecionada := Refecicao_Cadastro.QryRefeicao.FieldByName('ID_REFEICAO').AsInteger;
+          CarregarCardapio;
+        end;
+      end;
+    finally
+      Refecicao_Cadastro.Free;
+    end;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao abrir cadastro de refeições: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Receita.SpeedButton2Click(Sender: TObject);
+begin
+  try
+    Dias_Semana := TDias_Semana.Create(Self);
+    try
+      if Dias_Semana.ShowModal = mrOk then
+      begin
+        if not Dias_Semana.QryDiaSemana.IsEmpty then
+          begin
+            DBEdit3.Text := Dias_Semana.QryDiaSemana.FieldByName('NOME_DIA').AsString;
+            IDDiaSelecionado := Dias_Semana.QryDiaSemana.FieldByName('ID_DIA').AsInteger;
+            CarregarCardapio;
+          end;
+      end;
+    finally
+      Dias_Semana.Free;
+    end;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao abrir cadastro de dia de semana: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Receita.SpeedButton4Click(Sender: TObject);
+var
+  FormGrid: TForm;
+  Grid: TDBGrid;
+  DSGrid: TDataSource;
+  QryGrid: TFDQuery;
+begin
+  FormGrid := TForm.Create(Self);
+  try
+    FormGrid.Caption := 'Selecione um alimento';
+    FormGrid.Width := 550;
+    FormGrid.Height := 300;
+    FormGrid.Position := poScreenCenter;
+    FormGrid.BorderStyle := bsDialog;
+    FormGrid.Color := clBtnFace;
+
+    QryGrid := TFDQuery.Create(FormGrid);
+    QryGrid.Connection := DataModule1.FDConnection1;
+    QryGrid.SQL.Text :=
+      'SELECT ID_ALIMENTO, ' +
+      'CAST(NOME_ALIMENTO AS VARCHAR(100)) AS NOME_ALIMENTO, ' +
+      'CAST(CALORIA_ALIMENTO AS VARCHAR(20)) AS CALORIA_ALIMENTO, ' +
+      'CAST(PESO_ALIMENTO_G AS VARCHAR(20)) AS PESO_ALIMENTO_G ' +
+      'FROM CADASTRO_ALIMENTOS ' +
+      'ORDER BY NOME_ALIMENTO;';
+    QryGrid.Open;
+
+    DSGrid := TDataSource.Create(FormGrid);
+    DSGrid.DataSet := QryGrid;
+
+    Grid := TDBGrid.Create(FormGrid);
+    Grid.Parent := FormGrid;
+    Grid.Align := alClient;
+    Grid.DataSource := DSGrid;
+    Grid.ReadOnly := True;
+    Grid.Options := [dgTitles, dgRowSelect, dgColLines, dgRowLines];
+    Grid.TitleFont.Style := [fsBold];
+    Grid.Font.Size := 10;
+    Grid.FixedColor := RGB(220, 230, 240);
+    Grid.Color := clWhite;
+    Grid.DefaultDrawing := True;
+
+    Grid.Columns.Clear;
+
+    with Grid.Columns.Add do
+    begin
+      FieldName := 'NOME_ALIMENTO';
+      Title.Caption := 'Alimento';
+      Width := 300;
+      Alignment := taLeftJustify;
+    end;
+
+    with Grid.Columns.Add do
+    begin
+      FieldName := 'CALORIA_ALIMENTO';
+      Title.Caption := 'Calorias (kcal)';
+      Width := 120;
+      Alignment := taRightJustify;
+    end;
+
+    with Grid.Columns.Add do
+    begin
+      FieldName := 'PESO_ALIMENTO_G';
+      Title.Caption := 'Peso (g)';
+      Width := 70;
+      Alignment := taRightJustify;
+    end;
+
+    Grid.Tag := NativeInt(QryGrid);
+    Grid.OnDblClick := GridDblClick;
+
+    FormGrid.ShowModal;
+  finally
+    FormGrid.Free;
+  end;
+end;
+
+procedure TCadastro_Receita.GridDblClick(Sender: TObject);
+var
+  Grid: TDBGrid;
+  QryGrid: TFDQuery;
+begin
+  Grid := Sender as TDBGrid;
+  QryGrid := TFDQuery(Pointer(Grid.Tag));
+
+  if (QryGrid <> nil) and (not QryGrid.IsEmpty) then
+  begin
+    if QryGrid.FindField('NOME_ALIMENTO') <> nil then
+    begin
+      DBEdit4.Text := QryGrid.FieldByName('NOME_ALIMENTO').AsString;
+      IDAlimentoSelecionado := QryGrid.FieldByName('ID_ALIMENTO').AsInteger;
+    end
+    else if QryGrid.FindField('NOME') <> nil then
+    begin
+      Nome.Text := QryGrid.FieldByName('NOME').AsString;
+      IDUsuarioSelecionado := QryGrid.FieldByName('ID_USUARIO').AsInteger;
+      IDDiaSelecionado := 0;
+      DBEdit3.Clear;
+      CarregarCardapio;
+    end;
+  end;
+
+  if (Grid.Parent is TForm) then
+    (Grid.Parent as TForm).Close;
+end;
+
+procedure TCadastro_Receita.CarregarCardapio;
+var
+  i: Integer;
+  SQLBase: string;
+begin
+  FDQuery1.Close;
+
+  SQLBase :=
+    'SELECT ' +
+    '  J.ID_ITEM, ' +
+    '  CAST(U.NOME AS VARCHAR(100)) AS USUARIO, ' +
+    '  CAST(R.NOME_REFEICAO AS VARCHAR(100)) AS REFEICAO, ' +
+    '  CAST(D.NOME_DIA AS VARCHAR(50)) AS DIA_SEMANA, ' +
+    '  CAST(A.NOME_ALIMENTO AS VARCHAR(100)) AS ALIMENTO, ' +
+    '  CAST(A.CALORIA_ALIMENTO AS VARCHAR(20)) AS CALORIAS, ' +
+    '  CAST(A.PESO_ALIMENTO_G AS VARCHAR(20)) AS PESO_GRAMAS ' +
+    'FROM JUNCAO_ALIMENTO J ' +
+    'INNER JOIN USUARIOS U ON U.ID_USUARIO = J.ID_USUARIO ' +
+    'INNER JOIN REFEICOES R ON R.ID_REFEICAO = J.ID_REFEICAO ' +
+    'INNER JOIN DIAS_SEMANA D ON D.ID_DIA = J.ID_DIA ' +
+    'INNER JOIN CADASTRO_ALIMENTOS A ON A.ID_ALIMENTO = J.ID_ALIMENTO ' +
+    'WHERE 1=1 ';
+
+  if IDUsuarioSelecionado > 0 then
+    SQLBase := SQLBase + ' AND J.ID_USUARIO = :U ';
+
+  if IDRefeicaoSelecionada > 0 then
+    SQLBase := SQLBase + ' AND J.ID_REFEICAO = :R ';
+
+  if IDDiaSelecionado > 0 then
+    SQLBase := SQLBase + ' AND J.ID_DIA = :D ';
+
+  SQLBase := SQLBase + ' ORDER BY D.NOME_DIA, R.NOME_REFEICAO, A.NOME_ALIMENTO;';
+
+  FDQuery1.SQL.Text := SQLBase;
+
+  if IDUsuarioSelecionado > 0 then
+    FDQuery1.ParamByName('U').AsInteger := IDUsuarioSelecionado;
+
+  if IDRefeicaoSelecionada > 0 then
+    FDQuery1.ParamByName('R').AsInteger := IDRefeicaoSelecionada;
+
+  if IDDiaSelecionado > 0 then
+    FDQuery1.ParamByName('D').AsInteger := IDDiaSelecionado;
+
+  FDQuery1.Open;
+
+  DataSource1.DataSet := FDQuery1;
+  lista_alimento.DataSource := DataSource1;
+
+  lista_alimento.Columns.Clear;
+  for i := 0 to FDQuery1.FieldCount - 1 do
+  begin
+    with lista_alimento.Columns.Add do
+    begin
+      FieldName := FDQuery1.Fields[i].FieldName;
+      Title.Caption := FDQuery1.Fields[i].DisplayName;
+      Width := 120;
+    end;
+  end;
+
+  if FDQuery1.FindField('ID_ITEM') <> nil then
+    lista_alimento.Columns[FDQuery1.FieldByName('ID_ITEM').Index].Visible := False;
+
+  FDQuery1.FieldByName('USUARIO').DisplayLabel := 'Usuário';
+  FDQuery1.FieldByName('REFEICAO').DisplayLabel := 'Refeição';
+  FDQuery1.FieldByName('DIA_SEMANA').DisplayLabel := 'Dia da Semana';
+  FDQuery1.FieldByName('ALIMENTO').DisplayLabel := 'Alimento';
+  FDQuery1.FieldByName('CALORIAS').DisplayLabel := 'Calorias';
+  FDQuery1.FieldByName('PESO_GRAMAS').DisplayLabel := 'Peso (g)';
+
+  AtualizarRotuloResumo;
+end;
+
+procedure TCadastro_Receita.AtualizarRotuloResumo;
+begin
+  if (Nome.Text <> '') and (DBEdit2.Text <> '') and (DBEdit3.Text <> '') then
+    LabelResumo.Caption := Format('Cardápio de %s — %s (%s)', [Nome.Text, DBEdit2.Text, DBEdit3.Text])
+  else
+    LabelResumo.Caption := 'Cardápio ainda não definido';
+end;
+
+procedure TCadastro_Receita.AtualizarCardapio;
+begin
+  // Em vez de limpar quando falta algum filtro, recarrega sempre combinando os que já foram selecionados.
+  // Assim, usuário + refeição + dia funcionam de forma cumulativa.
+  try
+    CarregarCardapio;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao atualizar cardápio: ' + E.Message);
+  end;
+end;
+
+
+procedure TCadastro_Receita.SalvarClick(Sender: TObject);
+begin
+  if (IDUsuarioSelecionado = 0) or (IDRefeicaoSelecionada = 0) or (IDDiaSelecionado = 0) or (IDAlimentoSelecionado = 0) then
+  begin
+    ShowMessage('Selecione usuário, refeição, dia e alimento antes de salvar.');
+    Exit;
+  end;
+
+  try
+    DataModule1.FDConnection1.ExecSQL(
+      'INSERT INTO JUNCAO_ALIMENTO (ID_ALIMENTO, CALORIA_TOTAL, ID_USUARIO, ID_DIA, ID_REFEICAO) ' +
+      'VALUES (:ID_ALIMENTO, NULL, :U, :D, :R)',
+      [IDAlimentoSelecionado, IDUsuarioSelecionado, IDDiaSelecionado, IDRefeicaoSelecionada]
+    );
+
+    CarregarCardapio;
+    ShowMessage('Alimento adicionado com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao salvar alimento: ' + E.Message);
+  end;
+end;
+
+procedure TCadastro_Receita.ExcluirClick(Sender: TObject);
+begin
+  if FDQuery1.IsEmpty then Exit;
+
+  if MessageDlg('Deseja remover este alimento?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  begin
+    try
+      DataModule1.FDConnection1.ExecSQL(
+        'DELETE FROM JUNCAO_ALIMENTO WHERE ID_ITEM = :ID',
+        [FDQuery1.FieldByName('ID_ITEM').AsInteger]
+      );
+
+      CarregarCardapio;
+      ShowMessage('Alimento removido com sucesso!');
+    except
+      on E: Exception do
+        ShowMessage('Erro ao excluir alimento: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TCadastro_Receita.btnNovoClick(Sender: TObject);
+begin
+  ShowMessage('Modo de inclusão de novo alimento habilitado. Selecione os dados e clique em Salvar.');
+end;
+
+// ============================================================================
+//  BOTÃO REPLICAR - Painel dinâmico com seleção de dias e refeição destino
+// ============================================================================
+
+procedure TCadastro_Receita.btnReplicarClick(Sender: TObject);
+var
+  pnlReplicar: TPanel;
+  lblTitulo, lblRefeicao: TLabel;
+  gridDias: TDBGrid;
+  cbRefeicao: TComboBox;
+  btnConfirmar, btnCancelar: TButton;
+  qryDias, qryRef: TFDQuery;
+  dsDias: TDataSource;
+begin
+  // 🔸 Só exige o usuário selecionado e alguma linha na grid
+  if (IDUsuarioSelecionado = 0) then
+  begin
+    ShowMessage('Selecione um usuário antes de replicar.');
+    Exit;
+  end;
+
+  if FDQuery1.IsEmpty then
+  begin
+    ShowMessage('Não há alimentos listados para replicar.');
+    Exit;
+  end;
+
+  // 🔹 Painel flutuante
+  pnlReplicar := TPanel.Create(Self);
+  pnlReplicar.Name := 'pnlReplicar';
+  pnlReplicar.Parent := Self;
+  pnlReplicar.Align := alClient;
+  pnlReplicar.BevelOuter := bvNone;
+  pnlReplicar.Color := RGB(245, 248, 250);
+
+  // 🔹 Título
+  lblTitulo := TLabel.Create(pnlReplicar);
+  lblTitulo.Parent := pnlReplicar;
+  lblTitulo.Caption := 'Replicar alimentos para outros dias';
+  lblTitulo.Font.Size := 12;
+  lblTitulo.Font.Style := [fsBold];
+  lblTitulo.Left := 20;
+  lblTitulo.Top := 15;
+
+  // 🔹 Grid com os dias
+  qryDias := TFDQuery.Create(pnlReplicar);
+  qryDias.Name := 'qryRepDias';
+  qryDias.Connection := DataModule1.FDConnection1;
+  qryDias.SQL.Text := 'SELECT ID_DIA, NOME_DIA FROM DIAS_SEMANA ORDER BY ID_DIA';
+  qryDias.Open;
+
+  dsDias := TDataSource.Create(pnlReplicar);
+  dsDias.DataSet := qryDias;
+
+  gridDias := TDBGrid.Create(pnlReplicar);
+  gridDias.Name := 'gridRepDias';
+  gridDias.Parent := pnlReplicar;
+  gridDias.DataSource := dsDias;
+  gridDias.Left := 20;
+  gridDias.Top := 50;
+  gridDias.Width := 400;
+  gridDias.Height := 200;
+  gridDias.ReadOnly := True;
+  gridDias.Options := gridDias.Options + [dgMultiSelect, dgRowSelect, dgTitles];
+  gridDias.TitleFont.Style := [fsBold];
+  gridDias.Font.Size := 10;
+
+  // 🔹 Label + ComboBox de refeição destino
+  lblRefeicao := TLabel.Create(pnlReplicar);
+  lblRefeicao.Parent := pnlReplicar;
+  lblRefeicao.Caption := 'Selecione a refeição destino:';
+  lblRefeicao.Left := 20;
+  lblRefeicao.Top := gridDias.Top + gridDias.Height + 20;
+
+  cbRefeicao := TComboBox.Create(pnlReplicar);
+  cbRefeicao.Name := 'cbRepRefeicao';
+  cbRefeicao.Parent := pnlReplicar;
+  cbRefeicao.Left := 20;
+  cbRefeicao.Top := lblRefeicao.Top + 20;
+  cbRefeicao.Width := 250;
+  cbRefeicao.Style := csDropDownList;
+
+  qryRef := TFDQuery.Create(pnlReplicar);
+  qryRef.Connection := DataModule1.FDConnection1;
+  qryRef.SQL.Text := 'SELECT ID_REFEICAO, NOME_REFEICAO FROM REFEICOES ORDER BY NOME_REFEICAO';
+  qryRef.Open;
+
+  while not qryRef.Eof do
+  begin
+    cbRefeicao.Items.AddObject(
+      qryRef.FieldByName('NOME_REFEICAO').AsString,
+      TObject(qryRef.FieldByName('ID_REFEICAO').AsInteger)
+    );
+    qryRef.Next;
+  end;
+
+  // 🔹 Botão Confirmar
+  btnConfirmar := TButton.Create(pnlReplicar);
+  btnConfirmar.Parent := pnlReplicar;
+  btnConfirmar.Caption := 'Confirmar';
+  btnConfirmar.Left := 20;
+  btnConfirmar.Top := cbRefeicao.Top + 40;
+  btnConfirmar.Width := 100;
+  btnConfirmar.Height := 30;
+  btnConfirmar.OnClick := ReplicarConfirmarClick;
+
+  // 🔹 Botão Cancelar
+  btnCancelar := TButton.Create(pnlReplicar);
+  btnCancelar.Parent := pnlReplicar;
+  btnCancelar.Caption := 'Cancelar';
+  btnCancelar.Left := 130;
+  btnCancelar.Top := cbRefeicao.Top + 40;
+  btnCancelar.Width := 100;
+  btnCancelar.Height := 30;
+  btnCancelar.OnClick := ReplicarCancelarClick;
+end;
+
+// ============================================================================
+//  PROCEDURE: CANCELAR
+// ============================================================================
+procedure TCadastro_Receita.ReplicarCancelarClick(Sender: TObject);
+var
+  pnl: TPanel;
+begin
+  pnl := TPanel(FindComponent('pnlReplicar'));
+  if pnl <> nil then
+    pnl.Free;
+
+  // 🔸 Recarrega a grid conforme filtros atuais
+  try
+    CarregarCardapio;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao atualizar o cardápio: ' + E.Message);
+  end;
+end;
+
+// ============================================================================
+//  PROCEDURE: CONFIRMAR
+// ============================================================================
+procedure TCadastro_Receita.ReplicarConfirmarClick(Sender: TObject);
+var
+  pnl: TPanel;
+  grid: TDBGrid;
+  cb: TComboBox;
+  qry, qryCheck: TFDQuery;
+  i, DiaID, IDRefDestino: Integer;
+  Bookmarks: TBookmarkList;
+  alimentoAtual, IDAlimento: Integer;
+  NomeDia, NomeAlimento: string;
+  FezAlgumaInsercao: Boolean;
+  begin
+    pnl := TPanel(FindComponent('pnlReplicar'));
+    if pnl = nil then Exit;
+
+    grid := TDBGrid(pnl.FindComponent('gridRepDias'));
+    cb := TComboBox(pnl.FindComponent('cbRepRefeicao'));
+    qry := TFDQuery(TDataSource(grid.DataSource).DataSet);
+
+    if cb.ItemIndex < 0 then
+    begin
+      ShowMessage('Selecione uma refeição destino.');
+      Exit;
+    end;
+
+    IDRefDestino := Integer(cb.Items.Objects[cb.ItemIndex]);
+
+    if grid.SelectedRows.Count = 0 then
+    begin
+      ShowMessage('Selecione ao menos um dia da semana.');
+      Exit;
+    end;
+
+    alimentoAtual := FDQuery1.FieldByName('ID_ITEM').AsInteger;
+    qryCheck := TFDQuery.Create(nil);
+    FezAlgumaInsercao := False; // 🔹 flag para controlar se houve replicação real
+    try
+      qryCheck.Connection := DataModule1.FDConnection1;
+
+      Bookmarks := grid.SelectedRows;
+      for i := 0 to Bookmarks.Count - 1 do
+      begin
+        qry.GotoBookmark(Bookmarks[i]);
+        DiaID := qry.FieldByName('ID_DIA').AsInteger;
+        NomeDia := qry.FieldByName('NOME_DIA').AsString;
+
+        IDAlimento := 0;
+        with TFDQuery.Create(nil) do
+        try
+          Connection := DataModule1.FDConnection1;
+          SQL.Text := 'SELECT ID_ALIMENTO FROM JUNCAO_ALIMENTO WHERE ID_ITEM = :ITEM';
+          ParamByName('ITEM').AsInteger := alimentoAtual;
+          Open;
+          if not IsEmpty then
+            IDAlimento := FieldByName('ID_ALIMENTO').AsInteger;
+        finally
+          Free;
+        end;
+
+        NomeAlimento := FDQuery1.FieldByName('ALIMENTO').AsString;
+
+        qryCheck.Close;
+        qryCheck.SQL.Text :=
+          'SELECT COUNT(*) AS QTD FROM JUNCAO_ALIMENTO ' +
+          'WHERE ID_USUARIO = :U AND ID_REFEICAO = :R AND ID_DIA = :D AND ID_ALIMENTO = :A';
+        qryCheck.ParamByName('U').AsInteger := IDUsuarioSelecionado;
+        qryCheck.ParamByName('R').AsInteger := IDRefDestino;
+        qryCheck.ParamByName('D').AsInteger := DiaID;
+        qryCheck.ParamByName('A').AsInteger := IDAlimento;
+        qryCheck.Open;
+
+        if qryCheck.FieldByName('QTD').AsInteger > 0 then
+        begin
+          ShowMessage('⚠️ O alimento "' + NomeAlimento + '" já está cadastrado para o dia "' +
+                      NomeDia + '" nessa refeição.');
+          Continue;
+        end;
+
+        try
+          DataModule1.FDConnection1.ExecSQL(
+            'INSERT INTO JUNCAO_ALIMENTO (ID_ALIMENTO, CALORIA_TOTAL, ID_USUARIO, ID_DIA, ID_REFEICAO) ' +
+            'SELECT ID_ALIMENTO, NULL, :U, :D, :R FROM JUNCAO_ALIMENTO WHERE ID_ITEM = :ITEM',
+            [IDUsuarioSelecionado, DiaID, IDRefDestino, alimentoAtual]
+          );
+          FezAlgumaInsercao := True; // ✅ Marca que algo foi inserido
+        except
+          on E: EFDDBEngineException do
+          begin
+            if (Pos('unique', LowerCase(E.Message)) > 0) or
+               (Pos('duplicate', LowerCase(E.Message)) > 0) or
+               (Pos('constraint', LowerCase(E.Message)) > 0) then
+              ShowMessage('⚠️ O alimento já está cadastrado para o dia "' +
+                          qry.FieldByName('NOME_DIA').AsString + '" nessa refeição.')
+            else
+              ShowMessage('Erro ao replicar para o dia ' +
+                          qry.FieldByName('NOME_DIA').AsString + ': ' + E.Message);
+          end;
+        end;
+      end;
+    finally
+      qryCheck.Free;
+    end;
+
+    // 🔹 Mostra a mensagem de sucesso apenas se houve alguma inserção
+    if FezAlgumaInsercao then
+      ShowMessage('✅ Replicação concluída com sucesso!');
+
+    pnl.Free;
+
+    // 🔸 Atualiza o cardápio com filtros ativos
+    try
+      CarregarCardapio;
+    except
+      on E: Exception do
+        ShowMessage('Erro ao atualizar o cardápio: ' + E.Message);
+    end;
+  end;
+
+
+procedure TCadastro_Receita.btnCancelarClick(Sender: TObject);
+begin
+  if MessageDlg('Deseja cancelar a operação atual?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    ShowMessage('Operação cancelada.');
+end;
+
+procedure TCadastro_Receita.btnExcluirCardapioClick(Sender: TObject);
+begin
+  // Garante que os três filtros principais estão selecionados
+  if (IDUsuarioSelecionado = 0) or (IDRefeicaoSelecionada = 0) or (IDDiaSelecionado = 0) then
+  begin
+    ShowMessage('Selecione o usuário, a refeição e o dia antes de excluir o cardápio.');
+    Exit;
+  end;
+
+  // Confirmação do usuário
+  if MessageDlg(
+       Format('Deseja realmente excluir o cardápio de %s — %s (%s)?',
+              [Nome.Text, DBEdit2.Text, DBEdit3.Text]),
+       mtConfirmation, [mbYes, mbNo], 0) = mrNo then
+    Exit;
+
+  try
+    // Exclusão apenas da combinação atual
+    DataModule1.FDConnection1.ExecSQL(
+      'DELETE FROM JUNCAO_ALIMENTO ' +
+      'WHERE ID_USUARIO = :U AND ID_REFEICAO = :R AND ID_DIA = :D',
+      [IDUsuarioSelecionado, IDRefeicaoSelecionada, IDDiaSelecionado]
+    );
+
+    CarregarCardapio;
+    ShowMessage('Cardápio excluído com sucesso!');
+  except
+    on E: Exception do
+      ShowMessage('Erro ao excluir cardápio: ' + E.Message);
+  end;
+end;
+
+
+procedure TCadastro_Receita.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TCadastro_Receita.FormShow(Sender: TObject);
+begin
+  // Limpa tudo ao abrir a tela
+  IDUsuarioSelecionado := 0;
+  IDRefeicaoSelecionada := 0;
+  IDDiaSelecionado := 0;
+  IDAlimentoSelecionado := 0;
+
+  Nome.Clear;
+  DBEdit2.Clear;
+  DBEdit3.Clear;
+  DBEdit4.Clear;
+
+  FDQuery1.Close;
+  LabelResumo.Caption := 'Cardápio ainda não definido';
+end;
+
+end.
+
